@@ -44,7 +44,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ instances }) => {
     try {
       setIsLoading(true);
       const token = localStorage.getItem('access_token');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://app-vatkjvnd.fly.dev';
       const response = await fetch(`${apiUrl}${instances[instanceNumber].url}`, {
         headers: {
           Authorization: `Bearer ${token}`
