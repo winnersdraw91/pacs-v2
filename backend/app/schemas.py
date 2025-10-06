@@ -51,6 +51,33 @@ class DiagnosticCentre(DiagnosticCentreBase):
     class Config:
         from_attributes = True
 
+class ImagingMachineBase(BaseModel):
+    name: str
+    ip_address: str
+    port: int
+    ae_title: str
+    description: Optional[str] = None
+
+class ImagingMachineCreate(ImagingMachineBase):
+    centre_id: int
+
+class ImagingMachineUpdate(BaseModel):
+    name: Optional[str] = None
+    ip_address: Optional[str] = None
+    port: Optional[int] = None
+    ae_title: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class ImagingMachine(ImagingMachineBase):
+    id: int
+    centre_id: int
+    is_active: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 class StudyBase(BaseModel):
     patient_name: str
     patient_age: Optional[int] = None

@@ -65,6 +65,23 @@ class DiagnosticCentre(Base):
     users = relationship("User", back_populates="centre")
     studies = relationship("Study", back_populates="centre")
     pricing_config = relationship("PricingConfig", back_populates="centre")
+    imaging_machines = relationship("ImagingMachine", back_populates="centre")
+
+class ImagingMachine(Base):
+    __tablename__ = "imaging_machines"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    ip_address = Column(String, nullable=False)
+    port = Column(Integer, nullable=False)
+    ae_title = Column(String, nullable=False)
+    description = Column(Text)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    centre_id = Column(Integer, ForeignKey("diagnostic_centres.id"), nullable=False)
+    centre = relationship("DiagnosticCentre", back_populates="imaging_machines")
 
 class Study(Base):
     __tablename__ = "studies"

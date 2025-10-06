@@ -37,6 +37,7 @@ export const authAPI = {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     }),
   getCurrentUser: () => api.get('/auth/me'),
+  register: (data: any) => api.post('/auth/register', data),
 };
 
 export const usersAPI = {
@@ -100,4 +101,12 @@ export const billingAPI = {
 export const aiAPI = {
   processStudy: (studyId: number) => api.post(`/ai/process-study/${studyId}`),
   getReport: (studyId: number) => api.get(`/ai/report/${studyId}`),
+};
+
+export const imagingMachinesAPI = {
+  list: (params?: any) => api.get('/imaging-machines', { params }),
+  get: (id: number) => api.get(`/imaging-machines/${id}`),
+  create: (data: any) => api.post('/imaging-machines', data),
+  update: (id: number, data: any) => api.patch(`/imaging-machines/${id}`, data),
+  delete: (id: number) => api.delete(`/imaging-machines/${id}`),
 };
