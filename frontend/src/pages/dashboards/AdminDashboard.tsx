@@ -80,6 +80,12 @@ export const AdminDashboard: React.FC = () => {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (newUser.role === 'technician' && !newUser.centre_id) {
+      alert('Technicians must be associated with a diagnostic centre');
+      return;
+    }
+    
     try {
       await authAPI.register(newUser);
       setIsUserDialogOpen(false);
@@ -255,9 +261,12 @@ export const AdminDashboard: React.FC = () => {
                             </SelectContent>
                           </Select>
                         </div>
-                        {newUser.role === 'diagnostic_centre' && (
+                        {(newUser.role === 'diagnostic_centre' || newUser.role === 'technician') && (
                           <div className="grid gap-2">
-                            <Label htmlFor="centre">Diagnostic Centre</Label>
+                            <Label htmlFor="centre">
+                              Diagnostic Centre
+                              {newUser.role === 'technician' && <span className="text-red-500">*</span>}
+                            </Label>
                             <Select
                               value={newUser.centre_id?.toString()}
                               onValueChange={(value) => setNewUser({ ...newUser, centre_id: parseInt(value) })}
