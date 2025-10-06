@@ -27,6 +27,7 @@ export const AdminDashboard: React.FC = () => {
     full_name: '',
     password: '',
     role: 'radiologist',
+    centre_id: undefined as number | undefined,
   });
   const [newCentre, setNewCentre] = useState({
     name: '',
@@ -88,6 +89,7 @@ export const AdminDashboard: React.FC = () => {
         full_name: '',
         password: '',
         role: 'radiologist',
+        centre_id: undefined as number | undefined,
       });
       fetchUsers();
       fetchStats();
@@ -253,6 +255,26 @@ export const AdminDashboard: React.FC = () => {
                             </SelectContent>
                           </Select>
                         </div>
+                        {newUser.role === 'diagnostic_centre' && (
+                          <div className="grid gap-2">
+                            <Label htmlFor="centre">Diagnostic Centre</Label>
+                            <Select
+                              value={newUser.centre_id?.toString()}
+                              onValueChange={(value) => setNewUser({ ...newUser, centre_id: parseInt(value) })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select centre" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {centres.map((centre: any) => (
+                                  <SelectItem key={centre.id} value={centre.id.toString()}>
+                                    {centre.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
                       <DialogFooter>
                         <Button type="submit">Create User</Button>

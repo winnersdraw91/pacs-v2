@@ -17,9 +17,20 @@ async def list_users(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: User = Depends(get_current_active_user)
 ):
-    users = db.query(User).offset(skip).limit(limit).all()
+    query = db.query(User)
+    
+    if current_user.role == UserRole.ADMIN:
+        pass
+    elif current_user.role == UserRole.DIAGNOSTIC_CENTRE:
+        if not current_user.centre_id:
+            return []
+        query = query.filter(User.centre_id == current_user.centre_id)
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    users = query.offset(skip).limit(limit).all()
     return users
 
 @router.get("/{user_id}", response_model=UserSchema)
