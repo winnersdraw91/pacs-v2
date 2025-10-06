@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { usersAPI, centresAPI, studiesAPI, authAPI } from '@/lib/api';
+import { usersAPI, centresAPI, studiesAPI, authAPI, billingAPI } from '@/lib/api';
 import { Layout } from '@/components/Layout';
 import { Users, Building2, FileImage, DollarSign, Plus } from 'lucide-react';
 
@@ -17,8 +17,8 @@ export const AdminDashboard: React.FC = () => {
     totalStudies: 0,
     totalRevenue: 0,
   });
-  const [users, setUsers] = useState([]);
-  const [centres, setCentres] = useState([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [centres, setCentres] = useState<any[]>([]);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isCentreDialogOpen, setIsCentreDialogOpen] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -35,11 +35,24 @@ export const AdminDashboard: React.FC = () => {
     contact_email: '',
     contact_phone: '',
   });
+  const [pricingConfigs, setPricingConfigs] = useState<any[]>([]);
+  const [radiologists, setRadiologists] = useState<any[]>([]);
+  const [isPricingDialogOpen, setIsPricingDialogOpen] = useState(false);
+  const [pricingType, setPricingType] = useState<'centre' | 'radiologist'>('centre');
+  const [newPricing, setNewPricing] = useState({
+    centre_id: undefined as number | undefined,
+    radiologist_id: undefined as number | undefined,
+    modality: 'xray',
+    price: 0,
+    currency: 'usd',
+  });
 
   useEffect(() => {
     fetchStats();
     fetchUsers();
     fetchCentres();
+    fetchPricingConfigs();
+    fetchRadiologists();
   }, []);
 
   const fetchStats = async () => {
@@ -75,6 +88,25 @@ export const AdminDashboard: React.FC = () => {
       setCentres(response.data);
     } catch (error) {
       console.error('Failed to fetch centres:', error);
+    }
+  };
+
+  const fetchPricingConfigs = async () => {
+    try {
+      const response = await billingAPI.listPricing();
+      setPricingConfigs(response.data);
+    } catch (error) {
+      console.error('Failed to fetch pricing configs:', error);
+    }
+  };
+
+  const fetchRadiologists = async () => {
+    try {
+      const response = await usersAPI.list();
+      const rads = response.data.filter((user: any) => user.role === 'radiologist');
+      setRadiologists(rads);
+    } catch (error) {
+      console.error('Failed to fetch radiologists:', error);
     }
   };
 
@@ -121,6 +153,44 @@ export const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error('Failed to create centre:', error);
       alert('Failed to create centre. Please try again.');
+    }
+  };
+
+  const handleCreatePricing = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const pricingData: any = {
+        modality: newPricing.modality,
+        price: newPricing.price,
+        currency: newPricing.currency,
+      };
+      
+      if (pricingType === 'centre' && newPricing.centre_id) {
+        pricingData.centre_id = parseInt(newPricing.centre_id.toString());
+      } else if (pricingType === 'radiologist' && newPricing.radiologist_id) {
+        pricingData.radiologist_id = parseInt(newPricing.radiologist_id.toString());
+      }
+      
+      await billingAPI.createPricing(pricingData);
+      setIsPricingDialogOpen(false);
+      setNewPricing({
+        centre_id: undefined,
+        radiologist_id: undefined,
+        modality: 'xray',
+        price: 0,
+        currency: 'usd',
+      });
+      fetchPricingConfigs();
+      alert('Pricing configuration created successfully!');
+    } catch (error: any) {
+      console.error('Failed to create pricing:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      console.error('Error detail:', JSON.stringify(error.response?.data?.detail, null, 2));
+      const detailMsg = Array.isArray(error.response?.data?.detail) 
+        ? error.response.data.detail.map((d: any) => d.msg || d).join(', ')
+        : error.response?.data?.detail || 'Please try again.';
+      alert(`Failed to create pricing: ${detailMsg}`);
     }
   };
 
@@ -404,12 +474,182 @@ export const AdminDashboard: React.FC = () => {
 
           <TabsContent value="billing" className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Billing Overview</CardTitle>
-                <CardDescription>Manage billing and pricing configurations</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Pricing Configuration</CardTitle>
+                  <CardDescription>Set per-modality charges for centres and payouts for radiologists</CardDescription>
+                </div>
+                <Dialog open={isPricingDialogOpen} onOpenChange={setIsPricingDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Pricing
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Pricing Configuration</DialogTitle>
+                      <DialogDescription>Configure modality-based pricing for centres or radiologists</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleCreatePricing}>
+                      <div className="space-y-4">
+                        <div className="grid gap-2">
+                          <Label>Pricing Type</Label>
+                          <Select value={pricingType} onValueChange={(value: 'centre' | 'radiologist') => setPricingType(value)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="centre">Centre Charges</SelectItem>
+                              <SelectItem value="radiologist">Radiologist Payouts</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {pricingType === 'centre' ? (
+                          <div className="grid gap-2">
+                            <Label htmlFor="centre">Diagnostic Centre</Label>
+                            <Select
+                              value={newPricing.centre_id?.toString()}
+                              onValueChange={(value) => setNewPricing({ ...newPricing, centre_id: parseInt(value), radiologist_id: undefined })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select centre" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {centres.map((centre: any) => (
+                                  <SelectItem key={centre.id} value={centre.id.toString()}>
+                                    {centre.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : (
+                          <div className="grid gap-2">
+                            <Label htmlFor="radiologist">Radiologist</Label>
+                            <Select
+                              value={newPricing.radiologist_id?.toString()}
+                              onValueChange={(value) => setNewPricing({ ...newPricing, radiologist_id: parseInt(value), centre_id: undefined })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select radiologist" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {radiologists.map((rad: any) => (
+                                  <SelectItem key={rad.id} value={rad.id.toString()}>
+                                    {rad.full_name || rad.username}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                        
+                        <div className="grid gap-2">
+                          <Label htmlFor="modality">Modality</Label>
+                          <Select
+                            value={newPricing.modality}
+                            onValueChange={(value) => setNewPricing({ ...newPricing, modality: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="xray">X-Ray</SelectItem>
+                              <SelectItem value="ct">CT Scan</SelectItem>
+                              <SelectItem value="mri">MRI</SelectItem>
+                              <SelectItem value="ultrasound">Ultrasound</SelectItem>
+                              <SelectItem value="pet">PET Scan</SelectItem>
+                              <SelectItem value="mammography">Mammography</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="grid gap-2">
+                          <Label htmlFor="price">Price</Label>
+                          <Input
+                            id="price"
+                            type="number"
+                            step="0.01"
+                            value={newPricing.price}
+                            onChange={(e) => setNewPricing({ ...newPricing, price: parseFloat(e.target.value) || 0 })}
+                            required
+                          />
+                        </div>
+                        
+                        <div className="grid gap-2">
+                          <Label htmlFor="currency">Currency</Label>
+                          <Select
+                            value={newPricing.currency}
+                            onValueChange={(value) => setNewPricing({ ...newPricing, currency: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="usd">USD</SelectItem>
+                              <SelectItem value="inr">INR</SelectItem>
+                              <SelectItem value="aed">AED</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <DialogFooter className="mt-4">
+                        <Button type="submit">Create Pricing</Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">Billing management coming soon</p>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Centre Charges</h3>
+                    <div className="space-y-2">
+                      {pricingConfigs.filter((p: any) => p.centre_id).length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No centre pricing configured</p>
+                      ) : (
+                        pricingConfigs.filter((p: any) => p.centre_id).map((pricing: any) => {
+                          const centre = centres.find((c: any) => c.id === pricing.centre_id);
+                          return (
+                            <div key={pricing.id} className="flex items-center justify-between border rounded-lg p-3">
+                              <div>
+                                <p className="font-medium">{centre?.name || 'Unknown Centre'}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {pricing.modality.toUpperCase()} - {pricing.price} {pricing.currency.toUpperCase()}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Radiologist Payouts</h3>
+                    <div className="space-y-2">
+                      {pricingConfigs.filter((p: any) => p.radiologist_id).length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No radiologist pricing configured</p>
+                      ) : (
+                        pricingConfigs.filter((p: any) => p.radiologist_id).map((pricing: any) => {
+                          const radiologist = radiologists.find((r: any) => r.id === pricing.radiologist_id);
+                          return (
+                            <div key={pricing.id} className="flex items-center justify-between border rounded-lg p-3">
+                              <div>
+                                <p className="font-medium">{radiologist?.full_name || radiologist?.username || 'Unknown Radiologist'}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {pricing.modality.toUpperCase()} - {pricing.price} {pricing.currency.toUpperCase()}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -418,3 +658,5 @@ export const AdminDashboard: React.FC = () => {
     </Layout>
   );
 };
+
+export default AdminDashboard;

@@ -22,17 +22,40 @@ async def create_pricing_config(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role([UserRole.ADMIN]))
 ):
-    centre = db.query(DiagnosticCentre).filter(DiagnosticCentre.id == pricing.centre_id).first()
-    if not centre:
-        raise HTTPException(status_code=404, detail="Centre not found")
+    if not pricing.centre_id and not pricing.radiologist_id:
+        raise HTTPException(status_code=400, detail="Either centre_id or radiologist_id must be provided")
     
-    existing = db.query(PricingConfig).filter(
-        PricingConfig.centre_id == pricing.centre_id,
-        PricingConfig.modality == pricing.modality
-    ).first()
+    if pricing.centre_id and pricing.radiologist_id:
+        raise HTTPException(status_code=400, detail="Cannot specify both centre_id and radiologist_id")
     
-    if existing:
-        raise HTTPException(status_code=400, detail="Pricing already exists for this modality")
+    if pricing.centre_id:
+        centre = db.query(DiagnosticCentre).filter(DiagnosticCentre.id == pricing.centre_id).first()
+        if not centre:
+            raise HTTPException(status_code=404, detail="Centre not found")
+        
+        existing = db.query(PricingConfig).filter(
+            PricingConfig.centre_id == pricing.centre_id,
+            PricingConfig.modality == pricing.modality
+        ).first()
+        
+        if existing:
+            raise HTTPException(status_code=400, detail="Pricing already exists for this centre and modality")
+    
+    if pricing.radiologist_id:
+        radiologist = db.query(User).filter(
+            User.id == pricing.radiologist_id,
+            User.role == UserRole.RADIOLOGIST
+        ).first()
+        if not radiologist:
+            raise HTTPException(status_code=404, detail="Radiologist not found")
+        
+        existing = db.query(PricingConfig).filter(
+            PricingConfig.radiologist_id == pricing.radiologist_id,
+            PricingConfig.modality == pricing.modality
+        ).first()
+        
+        if existing:
+            raise HTTPException(status_code=400, detail="Pricing already exists for this radiologist and modality")
     
     db_pricing = PricingConfig(**pricing.dict())
     db.add(db_pricing)
@@ -43,6 +66,7 @@ async def create_pricing_config(
 @router.get("/pricing", response_model=List[PricingConfigSchema])
 async def list_pricing_configs(
     centre_id: Optional[int] = None,
+    radiologist_id: Optional[int] = None,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
@@ -52,10 +76,14 @@ async def list_pricing_configs(
     
     if centre_id:
         query = query.filter(PricingConfig.centre_id == centre_id)
+    elif radiologist_id:
+        query = query.filter(PricingConfig.radiologist_id == radiologist_id)
     elif current_user.role in [UserRole.DIAGNOSTIC_CENTRE, UserRole.TECHNICIAN]:
         if not current_user.centre_id:
             return []
         query = query.filter(PricingConfig.centre_id == current_user.centre_id)
+    elif current_user.role == UserRole.RADIOLOGIST:
+        query = query.filter(PricingConfig.radiologist_id == current_user.id)
     
     pricing_configs = query.offset(skip).limit(limit).all()
     return pricing_configs

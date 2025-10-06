@@ -130,11 +130,13 @@ class PricingConfigBase(BaseModel):
     currency: Currency = Currency.USD
 
 class PricingConfigCreate(PricingConfigBase):
-    centre_id: int
+    centre_id: Optional[int] = None
+    radiologist_id: Optional[int] = None
 
 class PricingConfig(PricingConfigBase):
     id: int
-    centre_id: int
+    centre_id: Optional[int] = None
+    radiologist_id: Optional[int] = None
     created_at: datetime
     
     class Config:

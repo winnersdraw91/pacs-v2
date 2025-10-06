@@ -139,8 +139,10 @@ class PricingConfig(Base):
     __tablename__ = "pricing_configs"
     
     id = Column(Integer, primary_key=True, index=True)
-    centre_id = Column(Integer, ForeignKey("diagnostic_centres.id"), nullable=False)
+    centre_id = Column(Integer, ForeignKey("diagnostic_centres.id"), nullable=True)
     centre = relationship("DiagnosticCentre", back_populates="pricing_config")
+    
+    radiologist_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     
     modality = Column(SQLEnum(Modality), nullable=False)
     price = Column(Float, nullable=False)
