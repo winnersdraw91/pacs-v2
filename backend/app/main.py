@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from contextlib import asynccontextmanager
 from app.database import engine, Base
 from app.routers import auth, users, centres, studies, reports, billing, ai, imaging_machines
@@ -10,6 +11,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="PACS System", lifespan=lifespan)
+
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=["*"])
 
 app.add_middleware(
     CORSMiddleware,
