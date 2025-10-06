@@ -81,8 +81,8 @@ export const AdminDashboard: React.FC = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (newUser.role === 'technician' && !newUser.centre_id) {
-      alert('Technicians must be associated with a diagnostic centre');
+    if ((newUser.role === 'technician' || newUser.role === 'diagnostic_centre') && !newUser.centre_id) {
+      alert('Technicians and Diagnostic Centre users must be associated with a diagnostic centre');
       return;
     }
     
@@ -265,7 +265,7 @@ export const AdminDashboard: React.FC = () => {
                           <div className="grid gap-2">
                             <Label htmlFor="centre">
                               Diagnostic Centre
-                              {newUser.role === 'technician' && <span className="text-red-500">*</span>}
+                              <span className="text-red-500">*</span>
                             </Label>
                             <Select
                               value={newUser.centre_id?.toString()}
