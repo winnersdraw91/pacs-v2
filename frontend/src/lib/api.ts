@@ -56,6 +56,7 @@ export const centresAPI = {
 export const studiesAPI = {
   list: (params?: any) => api.get('/studies', { params }),
   get: (id: string) => api.get(`/studies/${id}`),
+  getInstances: (id: string) => api.get(`/studies/${id}/instances`),
   create: (data: any, files?: File[]) => {
     const formData = new FormData();
     

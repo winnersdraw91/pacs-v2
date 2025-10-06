@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from pathlib import Path
 from app.database import get_db
 from app.auth import get_current_active_user, require_role
 from app.models import Study, User, UserRole, StudyStatus, Modality, DiagnosticCentre
 from app.schemas import Study as StudySchema, StudyCreate
-from app.dicom_utils import generate_study_id, save_dicom_files
+from app.dicom_utils import generate_study_id, save_dicom_files, list_dicom_files
 
 router = APIRouter(prefix="/studies", tags=["studies"])
 
@@ -149,3 +151,57 @@ async def update_study_status(
     db.commit()
     db.refresh(study)
     return study
+
+@router.get("/{study_id}/instances")
+async def get_study_instances(
+    study_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    study = db.query(Study).filter(Study.study_id == study_id).first()
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if current_user.role in [UserRole.DIAGNOSTIC_CENTRE, UserRole.TECHNICIAN]:
+        if study.centre_id != current_user.centre_id:
+            raise HTTPException(status_code=403, detail="Not authorized to view this study")
+    
+    dicom_files = list_dicom_files(study.dicom_files_path)
+    instances = []
+    for idx, file_path in enumerate(dicom_files):
+        instances.append({
+            "instance_number": idx,
+            "file_path": file_path,
+            "url": f"/api/studies/{study_id}/instances/{idx}"
+        })
+    
+    return {"study_id": study_id, "instances": instances}
+
+@router.get("/{study_id}/instances/{instance_number}")
+async def get_dicom_instance(
+    study_id: str,
+    instance_number: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    study = db.query(Study).filter(Study.study_id == study_id).first()
+    if not study:
+        raise HTTPException(status_code=404, detail="Study not found")
+    
+    if current_user.role in [UserRole.DIAGNOSTIC_CENTRE, UserRole.TECHNICIAN]:
+        if study.centre_id != current_user.centre_id:
+            raise HTTPException(status_code=403, detail="Not authorized to view this study")
+    
+    dicom_files = list_dicom_files(study.dicom_files_path)
+    if instance_number < 0 or instance_number >= len(dicom_files):
+        raise HTTPException(status_code=404, detail="Instance not found")
+    
+    file_path = dicom_files[instance_number]
+    if not Path(file_path).exists():
+        raise HTTPException(status_code=404, detail="DICOM file not found")
+    
+    return FileResponse(
+        file_path,
+        media_type="application/dicom",
+        filename=f"instance_{instance_number}.dcm"
+    )

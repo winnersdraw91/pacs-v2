@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { UploadStudy } from './pages/UploadStudy';
+import { ViewStudy } from './pages/ViewStudy';
 import './App.css';
 
 function App() {
@@ -26,6 +27,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['technician', 'diagnostic_centre', 'admin']}>
                 <UploadStudy />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/studies/:studyId"
+            element={
+              <ProtectedRoute>
+                <ViewStudy />
               </ProtectedRoute>
             }
           />

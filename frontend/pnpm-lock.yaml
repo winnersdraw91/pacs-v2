@@ -122,6 +122,9 @@ importers:
       dcmjs:
         specifier: ^0.45.0
         version: 0.45.0
+      dicom-parser:
+        specifier: ^1.8.21
+        version: 1.8.21
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@18.3.1)
