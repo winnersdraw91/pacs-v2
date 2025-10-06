@@ -12,7 +12,7 @@ interface DicomViewerProps {
   }>;
 }
 
-export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) => {
+export const DicomViewer: React.FC<DicomViewerProps> = ({ instances }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [currentInstance, setCurrentInstance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);

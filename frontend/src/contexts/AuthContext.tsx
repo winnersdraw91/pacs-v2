@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode';
 import { authAPI } from '@/lib/api';
 
 interface User {
@@ -50,7 +49,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { access_token } = response.data;
     localStorage.setItem('access_token', access_token);
     
-    const decoded: any = jwtDecode(access_token);
     const userResponse = await authAPI.getCurrentUser();
     setUser(userResponse.data);
   };

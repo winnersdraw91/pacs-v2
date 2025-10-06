@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { studiesAPI, reportsAPI } from '@/lib/api';
+import { studiesAPI } from '@/lib/api';
 import { Layout } from '@/components/Layout';
 import { FileImage, Clock, CheckCircle } from 'lucide-react';
 
@@ -33,15 +33,6 @@ export const RadiologistDashboard: React.FC = () => {
       });
     } catch (error) {
       console.error('Failed to fetch studies:', error);
-    }
-  };
-
-  const handleAssignToMe = async (studyId: number) => {
-    try {
-      await studiesAPI.assign(studyId, 0);
-      fetchStudies();
-    } catch (error) {
-      console.error('Failed to assign study:', error);
     }
   };
 
