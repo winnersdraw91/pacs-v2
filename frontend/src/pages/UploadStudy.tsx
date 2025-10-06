@@ -31,18 +31,19 @@ export const UploadStudy: React.FC = () => {
     setIsUploading(true);
 
     try {
+      if (!files || files.length === 0) {
+        setError('Please select at least one DICOM file');
+        setIsUploading(false);
+        return;
+      }
+
       const studyData = {
         ...formData,
-        patient_age: parseInt(formData.patient_age) || null,
+        patient_age: formData.patient_age ? parseInt(formData.patient_age) : undefined,
       };
 
-      const studyResponse = await studiesAPI.create(studyData);
-      const study = studyResponse.data;
-
-      if (files && files.length > 0) {
-        const fileArray = Array.from(files);
-        await studiesAPI.upload(study.id, fileArray);
-      }
+      const fileArray = Array.from(files);
+      await studiesAPI.create(studyData, fileArray);
 
       navigate('/dashboard');
     } catch (err: any) {

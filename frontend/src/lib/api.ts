@@ -55,18 +55,27 @@ export const centresAPI = {
 
 export const studiesAPI = {
   list: (params?: any) => api.get('/studies', { params }),
-  get: (id: number) => api.get(`/studies/${id}`),
-  create: (data: any) => api.post('/studies', data),
-  upload: (studyId: number, files: File[]) => {
+  get: (id: string) => api.get(`/studies/${id}`),
+  create: (data: any, files?: File[]) => {
     const formData = new FormData();
-    files.forEach((file) => formData.append('files', file));
-    return api.post(`/studies/${studyId}/upload`, formData, {
+    
+    Object.keys(data).forEach(key => {
+      if (data[key] !== null && data[key] !== undefined && data[key] !== '') {
+        formData.append(key, data[key].toString());
+      }
+    });
+    
+    if (files && files.length > 0) {
+      files.forEach((file) => formData.append('files', file));
+    }
+    
+    return api.post('/studies', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
-  assign: (studyId: number, radiologistId: number) =>
-    api.post(`/studies/${studyId}/assign`, { radiologist_id: radiologistId }),
-  updateStatus: (studyId: number, status: string) =>
+  assign: (studyId: string, radiologistId?: number) =>
+    api.post(`/studies/${studyId}/assign`, radiologistId ? { radiologist_id: radiologistId } : {}),
+  updateStatus: (studyId: string, status: string) =>
     api.patch(`/studies/${studyId}/status`, { status }),
 };
 
