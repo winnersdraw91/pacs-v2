@@ -4,20 +4,34 @@ from typing import Optional
 from app.database import get_db
 from app.auth import get_current_active_user, require_role
 from app.models import Study, Report, User, UserRole, StudyStatus
-from app.ai.image_processor import MONAIImageProcessor
-from app.ai.torchio_processor import TorchIOProcessor
-from app.ai.report_ai_generator import MedicalReportGenerator
 from app.dicom_utils import list_dicom_files
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ai", tags=["ai"])
 
-monai_processor = MONAIImageProcessor()
-torchio_processor = TorchIOProcessor()
-report_generator = MedicalReportGenerator()
+try:
+    from app.ai.image_processor import MONAIImageProcessor
+    from app.ai.torchio_processor import TorchIOProcessor
+    from app.ai.report_ai_generator import MedicalReportGenerator
+    
+    monai_processor = MONAIImageProcessor()
+    torchio_processor = TorchIOProcessor()
+    report_generator = MedicalReportGenerator()
+    AI_AVAILABLE = True
+    logger.info("AI modules loaded successfully")
+except ImportError as e:
+    logger.warning(f"AI modules not available: {e}. AI functionality will be disabled.")
+    AI_AVAILABLE = False
+    monai_processor = None
+    torchio_processor = None
+    report_generator = None
 
 def process_study_with_ai(study_id: int, db: Session):
+    if not AI_AVAILABLE:
+        logger.warning("AI processing skipped - AI modules not available")
+        return
+    
     try:
         study = db.query(Study).filter(Study.id == study_id).first()
         if not study:
@@ -107,6 +121,12 @@ async def analyze_study_with_ai(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    if not AI_AVAILABLE:
+        raise HTTPException(
+            status_code=503, 
+            detail="AI functionality not available. AI dependencies not installed."
+        )
+    
     study = db.query(Study).filter(Study.id == study_id).first()
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
