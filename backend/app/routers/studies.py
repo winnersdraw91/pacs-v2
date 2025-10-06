@@ -93,11 +93,11 @@ async def list_studies(
 
 @router.get("/{study_id}", response_model=StudySchema)
 async def get_study(
-    study_id: str,
+    study_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    study = db.query(Study).filter(Study.study_id == study_id).first()
+    study = db.query(Study).filter(Study.id == study_id).first()
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
     
@@ -109,12 +109,12 @@ async def get_study(
 
 @router.post("/{study_id}/assign")
 async def assign_study(
-    study_id: str,
+    study_id: int,
     radiologist_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    study = db.query(Study).filter(Study.study_id == study_id).first()
+    study = db.query(Study).filter(Study.id == study_id).first()
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
     
@@ -138,12 +138,12 @@ async def assign_study(
 
 @router.patch("/{study_id}/status")
 async def update_study_status(
-    study_id: str,
+    study_id: int,
     status: StudyStatus,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    study = db.query(Study).filter(Study.study_id == study_id).first()
+    study = db.query(Study).filter(Study.id == study_id).first()
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
     
@@ -154,11 +154,11 @@ async def update_study_status(
 
 @router.get("/{study_id}/instances")
 async def get_study_instances(
-    study_id: str,
+    study_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    study = db.query(Study).filter(Study.study_id == study_id).first()
+    study = db.query(Study).filter(Study.id == study_id).first()
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
     
@@ -172,19 +172,19 @@ async def get_study_instances(
         instances.append({
             "instance_number": idx,
             "file_path": file_path,
-            "url": f"/api/studies/{study_id}/instances/{idx}"
+            "url": f"/studies/{study_id}/instances/{idx}"
         })
     
     return {"study_id": study_id, "instances": instances}
 
 @router.get("/{study_id}/instances/{instance_number}")
 async def get_dicom_instance(
-    study_id: str,
+    study_id: int,
     instance_number: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    study = db.query(Study).filter(Study.study_id == study_id).first()
+    study = db.query(Study).filter(Study.id == study_id).first()
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
     

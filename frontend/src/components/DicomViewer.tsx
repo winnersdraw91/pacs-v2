@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import * as dicomParser from 'dicom-parser';
 
 interface DicomViewerProps {
   studyId: string;
@@ -15,19 +16,27 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [currentInstance, setCurrentInstance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [imageData, setImageData] = useState<ImageData | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [windowCenter, setWindowCenter] = useState(40);
+  const [windowWidth, setWindowWidth] = useState(400);
+  const imageDataRef = useRef<{
+    pixelData: Uint16Array | Int16Array;
+    width: number;
+    height: number;
+    minPixelValue: number;
+    maxPixelValue: number;
+  } | null>(null);
 
   useEffect(() => {
     loadInstance(0);
   }, []);
 
   useEffect(() => {
-    if (imageData && canvasRef.current) {
+    if (imageDataRef.current && canvasRef.current) {
       renderImage();
     }
-  }, [imageData, zoom, pan]);
+  }, [zoom, pan, windowCenter, windowWidth]);
 
   const loadInstance = async (instanceNumber: number) => {
     if (!instances[instanceNumber]) return;
@@ -35,7 +44,8 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
     try {
       setIsLoading(true);
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${window.location.origin}${instances[instanceNumber].url}`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}${instances[instanceNumber].url}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -43,33 +53,62 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
 
       if (!response.ok) throw new Error('Failed to load DICOM file');
 
-      const blob = await response.blob();
-      const arrayBuffer = await blob.arrayBuffer();
-      
-      const img = new Image();
-      const url = URL.createObjectURL(blob);
-      
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          setImageData(imgData);
+      const arrayBuffer = await response.arrayBuffer();
+      const byteArray = new Uint8Array(arrayBuffer);
+      const dataSet = dicomParser.parseDicom(byteArray);
+
+      const pixelDataElement = dataSet.elements.x7fe00010;
+      if (!pixelDataElement) {
+        throw new Error('No pixel data found in DICOM file');
+      }
+
+      const rows = dataSet.uint16('x00280010');
+      const cols = dataSet.uint16('x00280011');
+      const bitsAllocated = dataSet.uint16('x00280100');
+      const pixelRepresentation = dataSet.uint16('x00280103');
+
+      let pixelData: Uint16Array | Int16Array;
+      if (bitsAllocated === 16) {
+        if (pixelRepresentation === 0) {
+          pixelData = new Uint16Array(
+            arrayBuffer,
+            pixelDataElement.dataOffset,
+            pixelDataElement.length / 2
+          );
+        } else {
+          pixelData = new Int16Array(
+            arrayBuffer,
+            pixelDataElement.dataOffset,
+            pixelDataElement.length / 2
+          );
         }
-        URL.revokeObjectURL(url);
-        setIsLoading(false);
+      } else {
+        pixelData = new Uint16Array(
+          arrayBuffer,
+          pixelDataElement.dataOffset,
+          pixelDataElement.length / 2
+        );
+      }
+
+      const minPixelValue = Math.min(...Array.from(pixelData));
+      const maxPixelValue = Math.max(...Array.from(pixelData));
+
+      imageDataRef.current = {
+        pixelData,
+        width: cols || 256,
+        height: rows || 256,
+        minPixelValue,
+        maxPixelValue
       };
-      
-      img.onerror = () => {
-        console.error('Failed to load image');
-        setIsLoading(false);
-      };
-      
-      img.src = url;
+
+      setWindowCenter((minPixelValue + maxPixelValue) / 2);
+      setWindowWidth(maxPixelValue - minPixelValue);
       setCurrentInstance(instanceNumber);
+      setIsLoading(false);
+      
+      if (canvasRef.current) {
+        renderImage();
+      }
     } catch (error) {
       console.error('Error loading DICOM instance:', error);
       setIsLoading(false);
@@ -77,18 +116,47 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
   };
 
   const renderImage = () => {
-    if (!canvasRef.current || !imageData) return;
+    if (!canvasRef.current || !imageDataRef.current) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    const { pixelData, width, height } = imageDataRef.current;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const imageData = ctx.createImageData(width, height);
+    const data = imageData.data;
+
+    const windowMin = windowCenter - windowWidth / 2;
+    const windowMax = windowCenter + windowWidth / 2;
+
+    for (let i = 0; i < pixelData.length; i++) {
+      let pixelValue = pixelData[i];
+      
+      if (pixelValue <= windowMin) {
+        pixelValue = 0;
+      } else if (pixelValue >= windowMax) {
+        pixelValue = 255;
+      } else {
+        pixelValue = ((pixelValue - windowMin) / windowWidth) * 255;
+      }
+
+      const idx = i * 4;
+      data[idx] = pixelValue;
+      data[idx + 1] = pixelValue;
+      data[idx + 2] = pixelValue;
+      data[idx + 3] = 255;
+    }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     
     ctx.translate(canvas.width / 2 + pan.x, canvas.height / 2 + pan.y);
     ctx.scale(zoom, zoom);
-    ctx.translate(-imageData.width / 2, -imageData.height / 2);
+    ctx.translate(-width / 2, -height / 2);
     
     ctx.putImageData(imageData, 0, 0);
     ctx.restore();
