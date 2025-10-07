@@ -33,6 +33,11 @@ export default {
   				DEFAULT: "hsl(var(--secondary))",
   				foreground: "hsl(var(--secondary-foreground))",
   			},
+  			'ohif-cyan': {
+  				DEFAULT: '#5BCDE6',
+  				hover: '#4CB8D4',
+  			},
+  			'ohif-dark': '#050615',
   		},
   		backgroundImage: {
   			'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',

@@ -440,10 +440,11 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
           </h3>
           <div className="flex gap-2">
             <Button
-              size="sm"
+              size="icon"
               variant={aiEnabled ? "default" : "outline"}
               onClick={() => setAiEnabled(!aiEnabled)}
-              className={aiEnabled ? "bg-cyan-500 hover:bg-cyan-600 text-white" : "border-gray-600 text-gray-300 hover:bg-gray-800"}
+              className={`h-10 px-3 rounded-lg ${aiEnabled ? "bg-gray-700 hover:bg-gray-600 text-white" : "border-gray-600 text-gray-300 hover:bg-gray-800"}`}
+              title="AI Anatomy"
             >
               <SparklesIcon className="h-4 w-4 mr-1" />
               AI Anatomy
@@ -466,31 +467,31 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
         )}
         
         <motion.div
-          className="flex gap-1 bg-gray-900 border border-gray-800 rounded-lg p-2"
+          className="flex gap-6 bg-gray-900 border border-gray-800 rounded-lg p-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
           <ModeButton
-            icon={<Square2StackIcon className="h-5 w-5" />}
+            icon={<Square2StackIcon className="h-6 w-6" />}
             label="2D"
             active={renderingMode === '2D'}
             onClick={() => setRenderingMode('2D')}
           />
           <ModeButton
-            icon={<Squares2X2Icon className="h-5 w-5" />}
+            icon={<Squares2X2Icon className="h-6 w-6" />}
             label="MPR"
             active={renderingMode === 'MPR'}
             onClick={() => setRenderingMode('MPR')}
           />
           <ModeButton
-            icon={<CubeIcon className="h-5 w-5" />}
+            icon={<CubeIcon className="h-6 w-6" />}
             label="3D"
             active={renderingMode === '3D'}
             onClick={() => setRenderingMode('3D')}
           />
           <ModeButton
-            icon={<BeakerIcon className="h-5 w-5" />}
+            icon={<BeakerIcon className="h-6 w-6" />}
             label="MIP"
             active={renderingMode === 'MIP'}
             onClick={() => setRenderingMode('MIP')}
@@ -499,14 +500,14 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
         
         {renderingMode === '2D' && (
           <motion.div
-            className="flex items-center gap-2 bg-gray-900 border border-gray-800 rounded-lg p-2"
+            className="flex items-center gap-6 bg-gray-900 border border-gray-800 rounded-lg p-2"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
           >
-            <div className="flex gap-1">
+            <div className="flex gap-6">
               <ToolButton
-                icon={<CursorArrowRaysIcon className="h-5 w-5" />}
+                icon={<CursorArrowRaysIcon className="h-6 w-6" />}
                 label="Window/Level"
                 active={activeTool === TOOL_NAMES.WINDOW_LEVEL}
                 onClick={() => handleToolChange(TOOL_NAMES.WINDOW_LEVEL)}
@@ -514,7 +515,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
               
               <div className="relative">
                 <ToolButton
-                  icon={<ScaleIcon className="h-5 w-5" />}
+                  icon={<ScaleIcon className="h-6 w-6" />}
                   label="Measurements"
                   active={[TOOL_NAMES.LENGTH, TOOL_NAMES.ANGLE, TOOL_NAMES.BIDIRECTIONAL, TOOL_NAMES.PROBE].includes(activeTool)}
                   onClick={() => setShowMeasurementMenu(!showMeasurementMenu)}
@@ -557,7 +558,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
 
               <div className="relative">
                 <ToolButton
-                  icon={<Square2StackIcon className="h-5 w-5" />}
+                  icon={<Square2StackIcon className="h-6 w-6" />}
                   label="ROI Tools"
                   active={[TOOL_NAMES.ROI, TOOL_NAMES.ELLIPSE, TOOL_NAMES.CIRCLE].includes(activeTool)}
                   onClick={() => setShowROIMenu(!showROIMenu)}
@@ -593,7 +594,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
               </div>
               
               <ToolButton
-                icon={<MagnifyingGlassPlusIcon className="h-5 w-5" />}
+                icon={<MagnifyingGlassPlusIcon className="h-6 w-6" />}
                 label="Zoom"
                 active={activeTool === TOOL_NAMES.ZOOM}
                 onClick={() => handleToolChange(TOOL_NAMES.ZOOM)}
@@ -602,21 +603,22 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
             
             <div className="h-6 w-px bg-gray-800" />
             
-            <div className="flex gap-1">
+            <div className="flex gap-6">
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={handleReset}
-                className="text-gray-400 hover:bg-gray-800 hover:text-white"
+                className="text-gray-400 hover:bg-gray-800 hover:text-white h-10 w-10 p-0 rounded-lg"
+                title="Reset"
               >
-                <ArrowsPointingOutIcon className="h-5 w-5" />
+                <ArrowsPointingOutIcon className="h-6 w-6" />
               </Button>
             </div>
           </motion.div>
         )}
         
         <motion.div
-          className="flex gap-1 bg-gray-800 border border-gray-700 rounded-lg p-2"
+          className="flex gap-6 bg-gray-800 border border-gray-700 rounded-lg p-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3, delay: 0.2 }}
@@ -633,11 +635,11 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
               <motion.div key={preset} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={() => handlePresetChange(preset)}
                   className={`${
-                    activePreset === preset ? 'bg-cyan-500 hover:bg-cyan-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'
-                  } transition-all p-2 text-lg`}
+                    activePreset === preset ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  } transition-all h-10 w-10 p-0 rounded-lg text-lg`}
                   title={preset.charAt(0).toUpperCase() + preset.slice(1)}
                 >
                   {icons[preset as keyof typeof icons]}
@@ -804,7 +806,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
                 variant="outline"
                 size="sm"
                 onClick={handleCinePlay}
-                className={isCinePlaying ? "bg-cyan-500 hover:bg-cyan-600 text-white border-transparent" : "border-gray-600 text-gray-300 hover:bg-gray-700"}
+                className={isCinePlaying ? "bg-ohif-cyan hover:bg-ohif-cyan-hover text-ohif-dark border-transparent" : "border-gray-600 text-gray-300 hover:bg-gray-700"}
               >
                 {isCinePlaying ? (
                   <>
@@ -897,11 +899,11 @@ const ToolButton: React.FC<{
   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
     <Button
       variant="ghost"
-      size="sm"
+      size="icon"
       onClick={onClick}
       className={`${
-        active ? 'bg-cyan-500 hover:bg-cyan-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'
-      } transition-all p-2`}
+        active ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+      } transition-all h-10 w-10 p-0 rounded-lg`}
       title={label}
     >
       {icon}
@@ -918,11 +920,11 @@ const ModeButton: React.FC<{
   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
     <Button
       variant="ghost"
-      size="sm"
+      size="icon"
       onClick={onClick}
       className={`${
-        active ? 'bg-cyan-500 hover:bg-cyan-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'
-      } transition-all p-2`}
+        active ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+      } transition-all h-10 w-10 p-0 rounded-lg`}
       title={label}
     >
       {icon}
