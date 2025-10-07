@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { studiesAPI, usersAPI, imagingMachinesAPI, authAPI } from '@/lib/api';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, FileImage, DollarSign, Upload, Plus } from 'lucide-react';
+import { Users, FileImage, DollarSign, Upload } from 'lucide-react';
+import { PlusIcon } from '@heroicons/react/24/outline';
 
 export const DiagnosticCentreDashboard: React.FC = () => {
   const [stats, setStats] = useState({
@@ -223,7 +224,7 @@ export const DiagnosticCentreDashboard: React.FC = () => {
                 <Dialog open={isAddTechnicianOpen} onOpenChange={setIsAddTechnicianOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm">
-                      <Plus className="mr-2 h-4 w-4" />
+                      <PlusIcon className="mr-2 h-4 w-4" />
                       Add Technician
                     </Button>
                   </DialogTrigger>
@@ -304,7 +305,7 @@ export const DiagnosticCentreDashboard: React.FC = () => {
                 <Dialog open={isAddMachineOpen} onOpenChange={setIsAddMachineOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm">
-                      <Plus className="mr-2 h-4 w-4" />
+                      <PlusIcon className="mr-2 h-4 w-4" />
                       Add Machine
                     </Button>
                   </DialogTrigger>

@@ -8,7 +8,15 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { usersAPI, centresAPI, studiesAPI, authAPI, billingAPI } from '@/lib/api';
 import { Layout } from '@/components/Layout';
-import { Users, Building2, FileImage, DollarSign, Plus } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { 
+  UserGroupIcon, 
+  BuildingOfficeIcon, 
+  DocumentIcon, 
+  CurrencyDollarIcon, 
+  PlusIcon 
+} from '@heroicons/react/24/outline';
+import { fadeInUp, staggerContainer } from '@/lib/utils';
 
 export const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState({
@@ -204,47 +212,60 @@ export const AdminDashboard: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalUsers}</div>
-            </CardContent>
-          </Card>
+        <motion.div 
+          className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+        >
+          <motion.div variants={fadeInUp}>
+            <Card className="bg-gradient-modern text-white border-0 shadow-glow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-white">Total Users</CardTitle>
+                <UserGroupIcon className="h-5 w-5 text-white/80" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{stats.totalUsers}</div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Diagnostic Centres</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCentres}</div>
-            </CardContent>
-          </Card>
+          <motion.div variants={fadeInUp}>
+            <Card className="backdrop-blur-md bg-white/90 border border-white/20 shadow-glass hover:shadow-glow transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Diagnostic Centres</CardTitle>
+                <BuildingOfficeIcon className="h-5 w-5 text-indigo-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-gray-900">{stats.totalCentres}</div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Studies</CardTitle>
-              <FileImage className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalStudies}</div>
-            </CardContent>
-          </Card>
+          <motion.div variants={fadeInUp}>
+            <Card className="backdrop-blur-md bg-white/90 border border-white/20 shadow-glass hover:shadow-glow transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Studies</CardTitle>
+                <DocumentIcon className="h-5 w-5 text-purple-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-gray-900">{stats.totalStudies}</div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${stats.totalRevenue}</div>
-            </CardContent>
-          </Card>
-        </div>
+          <motion.div variants={fadeInUp}>
+            <Card className="backdrop-blur-md bg-white/90 border border-white/20 shadow-glass hover:shadow-glow transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+                <CurrencyDollarIcon className="h-5 w-5 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-gray-900">${stats.totalRevenue}</div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
 
         <Tabs defaultValue="users" className="space-y-4">
           <TabsList>
@@ -263,7 +284,7 @@ export const AdminDashboard: React.FC = () => {
                 <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
-                      <Plus className="h-4 w-4 mr-2" />
+                      <PlusIcon className="h-4 w-4 mr-2" />
                       Add User
                     </Button>
                   </DialogTrigger>
@@ -392,7 +413,7 @@ export const AdminDashboard: React.FC = () => {
                 <Dialog open={isCentreDialogOpen} onOpenChange={setIsCentreDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
-                      <Plus className="h-4 w-4 mr-2" />
+                      <PlusIcon className="h-4 w-4 mr-2" />
                       Add Centre
                     </Button>
                   </DialogTrigger>
@@ -482,7 +503,7 @@ export const AdminDashboard: React.FC = () => {
                 <Dialog open={isPricingDialogOpen} onOpenChange={setIsPricingDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
-                      <Plus className="h-4 w-4 mr-2" />
+                      <PlusIcon className="h-4 w-4 mr-2" />
                       Add Pricing
                     </Button>
                   </DialogTrigger>
