@@ -352,7 +352,7 @@ export const RadiologistDashboard: React.FC = () => {
                         >
                           <Button
                             size="sm"
-                            onClick={() => navigate(`/viewer/${study.id}`)}
+                            onClick={() => navigate(`/studies/${study.study_id}`)}
                             className="bg-gradient-modern hover:opacity-90 transition-opacity"
                           >
                             <PhotoIcon className="h-4 w-4 mr-2" />
