@@ -9,6 +9,78 @@ from app.routers import auth, users, centres, studies, reports, billing, ai, ima
 async def lifespan(app: FastAPI):
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    
+    from sqlalchemy.orm import Session
+    from app.auth import get_password_hash
+    from app.models import User, UserRole, DiagnosticCentre, PricingConfig, Modality, Currency
+    
+    db = Session(bind=engine)
+    try:
+        admin = User(
+            email="admin@pacs.com",
+            username="admin",
+            hashed_password=get_password_hash("admin"),
+            full_name="System Administrator",
+            role=UserRole.ADMIN,
+            is_active=True
+        )
+        db.add(admin)
+        
+        radiologist = User(
+            email="radiologist1@pacs.com",
+            username="radiologist1",
+            hashed_password=get_password_hash("radio"),
+            full_name="Dr. John Radiologist",
+            role=UserRole.RADIOLOGIST,
+            is_active=True
+        )
+        db.add(radiologist)
+        
+        centre = DiagnosticCentre(
+            name="Demo Diagnostic Centre",
+            address="123 Medical Street",
+            contact_email="contact@democentre.com",
+            contact_phone="+1234567890",
+            is_active=True
+        )
+        db.add(centre)
+        db.flush()
+        
+        pricing_xray = PricingConfig(
+            centre_id=centre.id,
+            modality=Modality.XRAY,
+            price=50.0,
+            currency=Currency.USD
+        )
+        db.add(pricing_xray)
+        
+        pricing_ct = PricingConfig(
+            centre_id=centre.id,
+            modality=Modality.CT,
+            price=200.0,
+            currency=Currency.USD
+        )
+        db.add(pricing_ct)
+        
+        tech = User(
+            email="tech1@democentre.com",
+            username="tech1",
+            hashed_password=get_password_hash("tech"),
+            full_name="Tech User",
+            role=UserRole.TECHNICIAN,
+            centre_id=centre.id,
+            is_active=True
+        )
+        db.add(tech)
+        
+        db.commit()
+        print("Database initialized with test users and data")
+    except Exception as e:
+        print(f"Database initialization error: {e}")
+        db.rollback()
+    finally:
+        db.close()
+    
     yield
 
 app = FastAPI(title="PACS System", lifespan=lifespan)
