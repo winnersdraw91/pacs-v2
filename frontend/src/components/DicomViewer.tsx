@@ -2,14 +2,20 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { 
-  MagnifyingGlassPlusIcon, 
-  MagnifyingGlassMinusIcon, 
+import {
+  MagnifyingGlassPlusIcon,
   ArrowsPointingOutIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ScaleIcon,
+  CursorArrowRaysIcon,
+  Square2StackIcon,
 } from '@heroicons/react/24/outline';
-import * as dicomParser from 'dicom-parser';
+import * as cornerstone from '@cornerstonejs/core';
+import { Enums } from '@cornerstonejs/core';
+import * as cornerstoneTools from '@cornerstonejs/tools';
+import cornerstoneDICOMImageLoader from '@cornerstonejs/dicom-image-loader';
+import { initCornerstone, WINDOW_LEVEL_PRESETS } from '@/lib/cornerstoneInit';
 
 interface DicomViewerProps {
   studyId: string;
@@ -19,250 +25,277 @@ interface DicomViewerProps {
   }>;
 }
 
-export const DicomViewer: React.FC<DicomViewerProps> = ({ instances }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+const {
+  LengthTool,
+  RectangleROITool,
+  AngleTool,
+  WindowLevelTool,
+  PanTool,
+  ZoomTool,
+  ToolGroupManager,
+  Enums: toolEnums,
+} = cornerstoneTools;
+
+const TOOL_NAMES = {
+  LENGTH: 'Length',
+  ROI: 'RectangleROI',
+  ANGLE: 'Angle',
+  WINDOW_LEVEL: 'WindowLevel',
+  PAN: 'Pan',
+  ZOOM: 'Zoom',
+};
+
+export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) => {
+  const viewportRef = useRef<HTMLDivElement>(null);
   const [currentInstance, setCurrentInstance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [windowCenter, setWindowCenter] = useState(40);
-  const [windowWidth, setWindowWidth] = useState(400);
-  const imageDataRef = useRef<{
-    pixelData: Uint16Array | Int16Array;
-    width: number;
-    height: number;
-    minPixelValue: number;
-    maxPixelValue: number;
-  } | null>(null);
-
+  const [activeTool, setActiveTool] = useState<string>(TOOL_NAMES.WINDOW_LEVEL);
+  const [activePreset, setActivePreset] = useState<string>('brain');
+  const [renderingEngine, setRenderingEngine] = useState<any>(null);
+  const [viewport, setViewport] = useState<any>(null);
+  const toolGroupId = useRef(`TOOL_GROUP_${studyId}`);
+  
   useEffect(() => {
-    loadInstance(0);
+    const init = async () => {
+      try {
+        await initCornerstone();
+        
+        cornerstoneTools.addTool(LengthTool);
+        cornerstoneTools.addTool(RectangleROITool);
+        cornerstoneTools.addTool(AngleTool);
+        cornerstoneTools.addTool(WindowLevelTool);
+        cornerstoneTools.addTool(PanTool);
+        cornerstoneTools.addTool(ZoomTool);
+        
+        const engine = new cornerstone.RenderingEngine(`engine_${studyId}`);
+        setRenderingEngine(engine);
+        
+        if (viewportRef.current) {
+          const viewportInput = {
+            viewportId: `viewport_${studyId}`,
+            type: Enums.ViewportType.STACK,
+            element: viewportRef.current,
+          };
+          
+          engine.enableElement(viewportInput);
+          const vp = engine.getViewport(viewportInput.viewportId);
+          setViewport(vp);
+          
+          const toolGroup = ToolGroupManager.createToolGroup(toolGroupId.current);
+          
+          if (toolGroup) {
+            toolGroup.addTool(TOOL_NAMES.LENGTH);
+            toolGroup.addTool(TOOL_NAMES.ROI);
+            toolGroup.addTool(TOOL_NAMES.ANGLE);
+            toolGroup.addTool(TOOL_NAMES.WINDOW_LEVEL);
+            toolGroup.addTool(TOOL_NAMES.PAN);
+            toolGroup.addTool(TOOL_NAMES.ZOOM);
+            
+            toolGroup.setToolActive(TOOL_NAMES.WINDOW_LEVEL, {
+              bindings: [{ mouseButton: toolEnums.MouseBindings.Primary }],
+            });
+            
+            toolGroup.addViewport(viewportInput.viewportId, `engine_${studyId}`);
+          }
+          
+          await loadInstance(0, vp);
+        }
+      } catch (error) {
+        console.error('Failed to initialize viewer:', error);
+        setIsLoading(false);
+      }
+    };
+    
+    init();
+    
+    return () => {
+      if (renderingEngine) {
+        renderingEngine.destroy();
+      }
+      try {
+        ToolGroupManager.destroyToolGroup(toolGroupId.current);
+      } catch (e) {
+        console.log('Tool group cleanup:', e);
+      }
+    };
   }, []);
-
-  useEffect(() => {
-    if (imageDataRef.current && canvasRef.current) {
-      renderImage();
-    }
-  }, [zoom, pan, windowCenter, windowWidth]);
-
-  const loadInstance = async (instanceNumber: number) => {
+  
+  const loadInstance = async (instanceNumber: number, viewportOverride?: any) => {
     if (!instances[instanceNumber]) return;
-
+    
+    const vp = viewportOverride || viewport;
+    if (!vp) return;
+    
     try {
       setIsLoading(true);
       const token = localStorage.getItem('access_token');
-      const apiUrl = 'https://app-vatkjvnd.fly.dev';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://app-vatkjvnd.fly.dev';
+      
       const response = await fetch(`${apiUrl}${instances[instanceNumber].url}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` },
       });
-
+      
       if (!response.ok) throw new Error('Failed to load DICOM file');
-
+      
       const arrayBuffer = await response.arrayBuffer();
-      const byteArray = new Uint8Array(arrayBuffer);
-      const dataSet = dicomParser.parseDicom(byteArray);
-
-      const pixelDataElement = dataSet.elements.x7fe00010;
-      if (!pixelDataElement) {
-        throw new Error('No pixel data found in DICOM file');
-      }
-
-      const rows = dataSet.uint16('x00280010');
-      const cols = dataSet.uint16('x00280011');
-      const bitsAllocated = dataSet.uint16('x00280100');
-      const pixelRepresentation = dataSet.uint16('x00280103');
-
-      let pixelData: Uint16Array | Int16Array;
-      if (bitsAllocated === 16) {
-        if (pixelRepresentation === 0) {
-          pixelData = new Uint16Array(
-            arrayBuffer,
-            pixelDataElement.dataOffset,
-            pixelDataElement.length / 2
-          );
-        } else {
-          pixelData = new Int16Array(
-            arrayBuffer,
-            pixelDataElement.dataOffset,
-            pixelDataElement.length / 2
-          );
-        }
-      } else {
-        pixelData = new Uint16Array(
-          arrayBuffer,
-          pixelDataElement.dataOffset,
-          pixelDataElement.length / 2
-        );
-      }
-
-      const minPixelValue = Math.min(...Array.from(pixelData));
-      const maxPixelValue = Math.max(...Array.from(pixelData));
-
-      imageDataRef.current = {
-        pixelData,
-        width: cols || 256,
-        height: rows || 256,
-        minPixelValue,
-        maxPixelValue
-      };
-
-      setWindowCenter((minPixelValue + maxPixelValue) / 2);
-      setWindowWidth(maxPixelValue - minPixelValue);
+      const blob = new Blob([arrayBuffer], { type: 'application/dicom' });
+      const imageId = cornerstoneDICOMImageLoader.wadouri.fileManager.add(blob);
+      
+      console.log('Setting stack with imageId:', imageId);
+      await vp.setStack([imageId]);
+      console.log('Stack set, rendering viewport...');
+      vp.render();
+      console.log('Viewport rendered successfully');
+      
       setCurrentInstance(instanceNumber);
       setIsLoading(false);
-      
-      if (canvasRef.current) {
-        renderImage();
-      }
     } catch (error) {
       console.error('Error loading DICOM instance:', error);
       setIsLoading(false);
     }
   };
-
-  const renderImage = () => {
-    if (!canvasRef.current || !imageDataRef.current) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const { pixelData, width, height } = imageDataRef.current;
-
-    canvas.width = width;
-    canvas.height = height;
-
-    const imageData = ctx.createImageData(width, height);
-    const data = imageData.data;
-
-    const windowMin = windowCenter - windowWidth / 2;
-    const windowMax = windowCenter + windowWidth / 2;
-
-    for (let i = 0; i < pixelData.length; i++) {
-      let pixelValue = pixelData[i];
-      
-      if (pixelValue <= windowMin) {
-        pixelValue = 0;
-      } else if (pixelValue >= windowMax) {
-        pixelValue = 255;
-      } else {
-        pixelValue = ((pixelValue - windowMin) / windowWidth) * 255;
-      }
-
-      const idx = i * 4;
-      data[idx] = pixelValue;
-      data[idx + 1] = pixelValue;
-      data[idx + 2] = pixelValue;
-      data[idx + 3] = 255;
+  
+  const handleToolChange = (toolName: string) => {
+    const toolGroup = ToolGroupManager.getToolGroup(toolGroupId.current);
+    if (!toolGroup) return;
+    
+    Object.values(TOOL_NAMES).forEach(tool => {
+      toolGroup.setToolPassive(tool);
+    });
+    
+    toolGroup.setToolActive(toolName, {
+      bindings: [{ mouseButton: toolEnums.MouseBindings.Primary }],
+    });
+    
+    setActiveTool(toolName);
+  };
+  
+  const handlePresetChange = (preset: string) => {
+    if (!viewport) return;
+    
+    const presetValues = WINDOW_LEVEL_PRESETS[preset as keyof typeof WINDOW_LEVEL_PRESETS];
+    if (presetValues) {
+      viewport.setProperties({
+        voiRange: {
+          lower: presetValues.windowCenter - presetValues.windowWidth / 2,
+          upper: presetValues.windowCenter + presetValues.windowWidth / 2,
+        },
+      });
+      viewport.render();
+      setActivePreset(preset);
     }
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    
-    ctx.translate(canvas.width / 2 + pan.x, canvas.height / 2 + pan.y);
-    ctx.scale(zoom, zoom);
-    ctx.translate(-width / 2, -height / 2);
-    
-    ctx.putImageData(imageData, 0, 0);
-    ctx.restore();
   };
-
-  const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev * 1.2, 5));
-  };
-
-  const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev / 1.2, 0.1));
-  };
-
+  
   const handleReset = () => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
+    if (!viewport) return;
+    viewport.resetCamera();
+    viewport.render();
   };
-
+  
   const handleNextInstance = () => {
     if (currentInstance < instances.length - 1) {
       loadInstance(currentInstance + 1);
     }
   };
-
+  
   const handlePrevInstance = () => {
     if (currentInstance > 0) {
       loadInstance(currentInstance - 1);
     }
   };
-
+  
   return (
     <Card className="backdrop-blur-sm bg-white/90 border-white/20 p-4">
       <div className="space-y-4">
-        <motion.div 
+        <motion.div
           className="flex items-center justify-between"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
           <h3 className="text-lg font-semibold bg-gradient-modern bg-clip-text text-transparent">
-            DICOM Viewer
+            Advanced DICOM Viewer
           </h3>
-          <div className="flex gap-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg p-2">
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+        </motion.div>
+        
+        <motion.div
+          className="flex items-center gap-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg p-2"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <div className="flex gap-1">
+            <ToolButton
+              icon={<CursorArrowRaysIcon className="h-5 w-5" />}
+              label="Window/Level"
+              active={activeTool === TOOL_NAMES.WINDOW_LEVEL}
+              onClick={() => handleToolChange(TOOL_NAMES.WINDOW_LEVEL)}
+            />
+            <ToolButton
+              icon={<ScaleIcon className="h-5 w-5" />}
+              label="Measure"
+              active={activeTool === TOOL_NAMES.LENGTH}
+              onClick={() => handleToolChange(TOOL_NAMES.LENGTH)}
+            />
+            <ToolButton
+              icon={<Square2StackIcon className="h-5 w-5" />}
+              label="ROI"
+              active={activeTool === TOOL_NAMES.ROI}
+              onClick={() => handleToolChange(TOOL_NAMES.ROI)}
+            />
+            <ToolButton
+              icon={<MagnifyingGlassPlusIcon className="h-5 w-5" />}
+              label="Zoom"
+              active={activeTool === TOOL_NAMES.ZOOM}
+              onClick={() => handleToolChange(TOOL_NAMES.ZOOM)}
+            />
+          </div>
+          
+          <div className="h-6 w-px bg-white/20" />
+          
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              className="hover:bg-white/20"
             >
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleZoomIn}
-                className="hover:bg-white/20"
-              >
-                <MagnifyingGlassPlusIcon className="h-5 w-5" />
-              </Button>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleZoomOut}
-                className="hover:bg-white/20"
-              >
-                <MagnifyingGlassMinusIcon className="h-5 w-5" />
-              </Button>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleReset}
-                className="hover:bg-white/20"
-              >
-                <ArrowsPointingOutIcon className="h-5 w-5" />
-              </Button>
-            </motion.div>
+              <ArrowsPointingOutIcon className="h-5 w-5" />
+            </Button>
           </div>
         </motion.div>
-
-        <motion.div 
+        
+        <motion.div
+          className="flex gap-2 flex-wrap"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+        >
+          {Object.keys(WINDOW_LEVEL_PRESETS).map(preset => (
+            <Button
+              key={preset}
+              size="sm"
+              variant={activePreset === preset ? "default" : "outline"}
+              onClick={() => handlePresetChange(preset)}
+              className={activePreset === preset ? "bg-gradient-modern text-white" : ""}
+            >
+              {preset.charAt(0).toUpperCase() + preset.slice(1)}
+            </Button>
+          ))}
+        </motion.div>
+        
+        <motion.div
           className="relative w-full h-[600px] bg-black rounded-lg overflow-hidden shadow-modern"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <canvas
-            ref={canvasRef}
-            width={800}
-            height={600}
+          <div
+            ref={viewportRef}
             className="absolute inset-0 w-full h-full"
           />
           {isLoading && (
-            <motion.div 
+            <motion.div
               className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-black/50"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -274,7 +307,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ instances }) => {
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                 />
-                <motion.div 
+                <motion.div
                   className="text-white text-sm"
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
@@ -285,21 +318,18 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ instances }) => {
             </motion.div>
           )}
         </motion.div>
-
+        
         {instances.length > 1 && (
-          <motion.div 
+          <motion.div
             className="flex items-center justify-between backdrop-blur-sm bg-white/50 rounded-lg p-3"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
           >
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button 
-                variant="outline" 
-                size="sm" 
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handlePrevInstance}
                 disabled={currentInstance === 0}
                 className="hover:bg-gradient-modern hover:text-white transition-all"
@@ -308,7 +338,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ instances }) => {
                 Previous
               </Button>
             </motion.div>
-            <motion.span 
+            <motion.span
               className="text-sm font-medium"
               key={currentInstance}
               initial={{ scale: 0.8, opacity: 0 }}
@@ -317,13 +347,10 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ instances }) => {
             >
               Instance {currentInstance + 1} of {instances.length}
             </motion.span>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button 
-                variant="outline" 
-                size="sm" 
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleNextInstance}
                 disabled={currentInstance === instances.length - 1}
                 className="hover:bg-gradient-modern hover:text-white transition-all"
@@ -338,3 +365,24 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ instances }) => {
     </Card>
   );
 };
+
+const ToolButton: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}> = ({ icon, label, active, onClick }) => (
+  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={onClick}
+      className={`${
+        active ? 'bg-gradient-modern text-white' : 'hover:bg-white/20'
+      } transition-all`}
+      title={label}
+    >
+      {icon}
+    </Button>
+  </motion.div>
+);

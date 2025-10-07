@@ -368,7 +368,7 @@ export const TechnicianDashboard: React.FC = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => navigate(`/study/${study.id}`)}
+                            onClick={() => navigate(`/studies/${study.id}`)}
                             className="hover:bg-gradient-modern hover:text-white transition-all"
                           >
                             View Details
