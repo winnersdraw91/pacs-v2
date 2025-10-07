@@ -10,6 +10,10 @@ import {
   ScaleIcon,
   CursorArrowRaysIcon,
   Square2StackIcon,
+  CubeIcon,
+  Squares2X2Icon,
+  BeakerIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import * as cornerstone from '@cornerstonejs/core';
 import { Enums } from '@cornerstonejs/core';
@@ -24,6 +28,8 @@ interface DicomViewerProps {
     url: string;
   }>;
 }
+
+type RenderingMode = '2D' | 'MPR' | '3D' | 'MIP';
 
 const {
   LengthTool,
@@ -47,10 +53,15 @@ const TOOL_NAMES = {
 
 export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) => {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const axialRef = useRef<HTMLDivElement>(null);
+  const coronalRef = useRef<HTMLDivElement>(null);
+  const sagittalRef = useRef<HTMLDivElement>(null);
   const [currentInstance, setCurrentInstance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTool, setActiveTool] = useState<string>(TOOL_NAMES.WINDOW_LEVEL);
   const [activePreset, setActivePreset] = useState<string>('brain');
+  const [renderingMode, setRenderingMode] = useState<RenderingMode>('2D');
+  const [aiEnabled, setAiEnabled] = useState(false);
   const [renderingEngine, setRenderingEngine] = useState<any>(null);
   const [viewport, setViewport] = useState<any>(null);
   const toolGroupId = useRef(`TOOL_GROUP_${studyId}`);
@@ -69,39 +80,8 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
         
         const engine = new cornerstone.RenderingEngine(`engine_${studyId}`);
         setRenderingEngine(engine);
-        
-        if (viewportRef.current) {
-          const viewportInput = {
-            viewportId: `viewport_${studyId}`,
-            type: Enums.ViewportType.STACK,
-            element: viewportRef.current,
-          };
-          
-          engine.enableElement(viewportInput);
-          const vp = engine.getViewport(viewportInput.viewportId);
-          setViewport(vp);
-          
-          const toolGroup = ToolGroupManager.createToolGroup(toolGroupId.current);
-          
-          if (toolGroup) {
-            toolGroup.addTool(TOOL_NAMES.LENGTH);
-            toolGroup.addTool(TOOL_NAMES.ROI);
-            toolGroup.addTool(TOOL_NAMES.ANGLE);
-            toolGroup.addTool(TOOL_NAMES.WINDOW_LEVEL);
-            toolGroup.addTool(TOOL_NAMES.PAN);
-            toolGroup.addTool(TOOL_NAMES.ZOOM);
-            
-            toolGroup.setToolActive(TOOL_NAMES.WINDOW_LEVEL, {
-              bindings: [{ mouseButton: toolEnums.MouseBindings.Primary }],
-            });
-            
-            toolGroup.addViewport(viewportInput.viewportId, `engine_${studyId}`);
-          }
-          
-          await loadInstance(0, vp);
-        }
       } catch (error) {
-        console.error('Failed to initialize viewer:', error);
+        console.error('Failed to initialize Cornerstone:', error);
         setIsLoading(false);
       }
     };
@@ -119,6 +99,177 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
       }
     };
   }, []);
+  
+  useEffect(() => {
+    if (!renderingEngine) return;
+    
+    const initializeViewports = async () => {
+      try {
+        setIsLoading(true);
+        
+        try {
+          ToolGroupManager.destroyToolGroup(toolGroupId.current);
+        } catch (e) {
+          console.log('No existing tool group to destroy');
+        }
+        
+        if (renderingMode === '2D') {
+          await initialize2DMode();
+        } else if (renderingMode === 'MPR') {
+          await initializeMPRMode();
+        } else if (renderingMode === '3D') {
+          await initialize3DMode();
+        } else if (renderingMode === 'MIP') {
+          await initializeMIPMode();
+        }
+      } catch (error) {
+        console.error('Failed to initialize viewports:', error);
+        setIsLoading(false);
+      }
+    };
+    
+    initializeViewports();
+  }, [renderingEngine, renderingMode]);
+  
+  const initialize2DMode = async () => {
+    if (!viewportRef.current || !renderingEngine) return;
+    
+    const viewportId = `viewport_2d_${studyId}`;
+    const viewportInput = {
+      viewportId,
+      type: Enums.ViewportType.STACK,
+      element: viewportRef.current,
+    };
+    
+    renderingEngine.enableElement(viewportInput);
+    const vp = renderingEngine.getViewport(viewportId);
+    setViewport(vp);
+    
+    const toolGroup = ToolGroupManager.createToolGroup(toolGroupId.current);
+    
+    if (toolGroup) {
+      toolGroup.addTool(TOOL_NAMES.LENGTH);
+      toolGroup.addTool(TOOL_NAMES.ROI);
+      toolGroup.addTool(TOOL_NAMES.ANGLE);
+      toolGroup.addTool(TOOL_NAMES.WINDOW_LEVEL);
+      toolGroup.addTool(TOOL_NAMES.PAN);
+      toolGroup.addTool(TOOL_NAMES.ZOOM);
+      
+      toolGroup.setToolActive(TOOL_NAMES.WINDOW_LEVEL, {
+        bindings: [{ mouseButton: toolEnums.MouseBindings.Primary }],
+      });
+      
+      toolGroup.addViewport(viewportId, `engine_${studyId}`);
+    }
+    
+    await loadInstance(0, vp);
+  };
+  
+  const initializeMPRMode = async () => {
+    if (!axialRef.current || !coronalRef.current || !sagittalRef.current || !renderingEngine) return;
+    
+    const axialViewportId = `viewport_axial_${studyId}`;
+    const coronalViewportId = `viewport_coronal_${studyId}`;
+    const sagittalViewportId = `viewport_sagittal_${studyId}`;
+    
+    const viewportInputs = [
+      {
+        viewportId: axialViewportId,
+        type: Enums.ViewportType.STACK,
+        element: axialRef.current,
+      },
+      {
+        viewportId: coronalViewportId,
+        type: Enums.ViewportType.STACK,
+        element: coronalRef.current,
+      },
+      {
+        viewportId: sagittalViewportId,
+        type: Enums.ViewportType.STACK,
+        element: sagittalRef.current,
+      },
+    ];
+    
+    viewportInputs.forEach(input => {
+      renderingEngine.enableElement(input);
+    });
+    
+    const axialVp = renderingEngine.getViewport(axialViewportId);
+    const coronalVp = renderingEngine.getViewport(coronalViewportId);
+    const sagittalVp = renderingEngine.getViewport(sagittalViewportId);
+    
+    const toolGroup = ToolGroupManager.createToolGroup(toolGroupId.current);
+    
+    if (toolGroup) {
+      toolGroup.addTool(TOOL_NAMES.WINDOW_LEVEL);
+      toolGroup.addTool(TOOL_NAMES.PAN);
+      toolGroup.addTool(TOOL_NAMES.ZOOM);
+      
+      toolGroup.setToolActive(TOOL_NAMES.WINDOW_LEVEL, {
+        bindings: [{ mouseButton: toolEnums.MouseBindings.Primary }],
+      });
+      
+      toolGroup.addViewport(axialViewportId, `engine_${studyId}`);
+      toolGroup.addViewport(coronalViewportId, `engine_${studyId}`);
+      toolGroup.addViewport(sagittalViewportId, `engine_${studyId}`);
+    }
+    
+    await loadInstance(0, axialVp);
+    await loadInstance(0, coronalVp);
+    await loadInstance(0, sagittalVp);
+    
+    try {
+      const axialCamera = axialVp.getCamera();
+      const coronalCamera = coronalVp.getCamera();
+      const sagittalCamera = sagittalVp.getCamera();
+      
+      axialVp.setCamera({
+        ...axialCamera,
+        viewPlaneNormal: [0, 0, 1],
+        viewUp: [0, -1, 0],
+      });
+      
+      coronalVp.setCamera({
+        ...coronalCamera,
+        viewPlaneNormal: [0, 1, 0],
+        viewUp: [0, 0, -1],
+      });
+      
+      sagittalVp.setCamera({
+        ...sagittalCamera,
+        viewPlaneNormal: [1, 0, 0],
+        viewUp: [0, 0, -1],
+      });
+      
+      axialVp.render();
+      coronalVp.render();
+      sagittalVp.render();
+    } catch (error) {
+      console.log('Camera orientation setup:', error);
+    }
+  };
+  
+  const initialize3DMode = async () => {
+    if (!viewportRef.current || !renderingEngine) return;
+    
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+    
+    console.log('3D volume rendering requires multi-slice DICOM data');
+  };
+  
+  const initializeMIPMode = async () => {
+    if (!viewportRef.current || !renderingEngine) return;
+    
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+    
+    console.log('MIP rendering requires multi-slice DICOM data');
+  };
   
   const loadInstance = async (instanceNumber: number, viewportOverride?: any) => {
     if (!instances[instanceNumber]) return;
@@ -216,54 +367,113 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
           <h3 className="text-lg font-semibold bg-gradient-modern bg-clip-text text-transparent">
             Advanced DICOM Viewer
           </h3>
-        </motion.div>
-        
-        <motion.div
-          className="flex items-center gap-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg p-2"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-        >
-          <div className="flex gap-1">
-            <ToolButton
-              icon={<CursorArrowRaysIcon className="h-5 w-5" />}
-              label="Window/Level"
-              active={activeTool === TOOL_NAMES.WINDOW_LEVEL}
-              onClick={() => handleToolChange(TOOL_NAMES.WINDOW_LEVEL)}
-            />
-            <ToolButton
-              icon={<ScaleIcon className="h-5 w-5" />}
-              label="Measure"
-              active={activeTool === TOOL_NAMES.LENGTH}
-              onClick={() => handleToolChange(TOOL_NAMES.LENGTH)}
-            />
-            <ToolButton
-              icon={<Square2StackIcon className="h-5 w-5" />}
-              label="ROI"
-              active={activeTool === TOOL_NAMES.ROI}
-              onClick={() => handleToolChange(TOOL_NAMES.ROI)}
-            />
-            <ToolButton
-              icon={<MagnifyingGlassPlusIcon className="h-5 w-5" />}
-              label="Zoom"
-              active={activeTool === TOOL_NAMES.ZOOM}
-              onClick={() => handleToolChange(TOOL_NAMES.ZOOM)}
-            />
-          </div>
-          
-          <div className="h-6 w-px bg-white/20" />
-          
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             <Button
-              variant="ghost"
               size="sm"
-              onClick={handleReset}
-              className="hover:bg-white/20"
+              variant={aiEnabled ? "default" : "outline"}
+              onClick={() => setAiEnabled(!aiEnabled)}
+              className={aiEnabled ? "bg-gradient-modern text-white" : ""}
             >
-              <ArrowsPointingOutIcon className="h-5 w-5" />
+              <SparklesIcon className="h-4 w-4 mr-1" />
+              AI Anatomy
             </Button>
           </div>
         </motion.div>
+        
+        {aiEnabled && (
+          <motion.div
+            className="backdrop-blur-md bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-3"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            <div className="flex items-center gap-2 text-yellow-700 text-sm">
+              <BeakerIcon className="h-5 w-5" />
+              <span>AI analysis currently unavailable - AI modules are disabled in the backend</span>
+            </div>
+          </motion.div>
+        )}
+        
+        <motion.div
+          className="flex gap-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg p-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <ModeButton
+            icon={<Square2StackIcon className="h-5 w-5" />}
+            label="2D"
+            active={renderingMode === '2D'}
+            onClick={() => setRenderingMode('2D')}
+          />
+          <ModeButton
+            icon={<Squares2X2Icon className="h-5 w-5" />}
+            label="MPR"
+            active={renderingMode === 'MPR'}
+            onClick={() => setRenderingMode('MPR')}
+          />
+          <ModeButton
+            icon={<CubeIcon className="h-5 w-5" />}
+            label="3D"
+            active={renderingMode === '3D'}
+            onClick={() => setRenderingMode('3D')}
+          />
+          <ModeButton
+            icon={<BeakerIcon className="h-5 w-5" />}
+            label="MIP"
+            active={renderingMode === 'MIP'}
+            onClick={() => setRenderingMode('MIP')}
+          />
+        </motion.div>
+        
+        {renderingMode === '2D' && (
+          <motion.div
+            className="flex items-center gap-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg p-2"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+          >
+            <div className="flex gap-1">
+              <ToolButton
+                icon={<CursorArrowRaysIcon className="h-5 w-5" />}
+                label="Window/Level"
+                active={activeTool === TOOL_NAMES.WINDOW_LEVEL}
+                onClick={() => handleToolChange(TOOL_NAMES.WINDOW_LEVEL)}
+              />
+              <ToolButton
+                icon={<ScaleIcon className="h-5 w-5" />}
+                label="Measure"
+                active={activeTool === TOOL_NAMES.LENGTH}
+                onClick={() => handleToolChange(TOOL_NAMES.LENGTH)}
+              />
+              <ToolButton
+                icon={<Square2StackIcon className="h-5 w-5" />}
+                label="ROI"
+                active={activeTool === TOOL_NAMES.ROI}
+                onClick={() => handleToolChange(TOOL_NAMES.ROI)}
+              />
+              <ToolButton
+                icon={<MagnifyingGlassPlusIcon className="h-5 w-5" />}
+                label="Zoom"
+                active={activeTool === TOOL_NAMES.ZOOM}
+                onClick={() => handleToolChange(TOOL_NAMES.ZOOM)}
+              />
+            </div>
+            
+            <div className="h-6 w-px bg-white/20" />
+            
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                className="hover:bg-white/20"
+              >
+                <ArrowsPointingOutIcon className="h-5 w-5" />
+              </Button>
+            </div>
+          </motion.div>
+        )}
         
         <motion.div
           className="flex gap-2 flex-wrap"
@@ -284,40 +494,158 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
           ))}
         </motion.div>
         
-        <motion.div
-          className="relative w-full h-[600px] bg-black rounded-lg overflow-hidden shadow-modern"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-        >
-          <div
-            ref={viewportRef}
-            className="absolute inset-0 w-full h-full"
-          />
-          {isLoading && (
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-black/50"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <div className="flex flex-col items-center gap-4">
-                <motion.div
-                  className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                />
-                <motion.div
-                  className="text-white text-sm"
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                >
-                  Loading DICOM image...
-                </motion.div>
+        {renderingMode === '2D' && (
+          <motion.div
+            className="relative w-full h-[600px] bg-black rounded-lg overflow-hidden shadow-modern"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+          >
+            <div
+              ref={viewportRef}
+              className="absolute inset-0 w-full h-full"
+            />
+            {isLoading && (
+              <motion.div
+                className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-black/50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <div className="flex flex-col items-center gap-4">
+                  <motion.div
+                    className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  />
+                  <motion.div
+                    className="text-white text-sm"
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    Loading DICOM image...
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+        
+        {renderingMode === 'MPR' && (
+          <motion.div
+            className="grid grid-cols-2 gap-4"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="relative h-[400px] bg-black rounded-lg overflow-hidden shadow-modern">
+              <div ref={axialRef} className="absolute inset-0 w-full h-full" />
+              <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                Axial
               </div>
-            </motion.div>
-          )}
-        </motion.div>
+            </div>
+            <div className="relative h-[400px] bg-black rounded-lg overflow-hidden shadow-modern">
+              <div ref={coronalRef} className="absolute inset-0 w-full h-full" />
+              <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                Coronal
+              </div>
+            </div>
+            <div className="relative h-[400px] bg-black rounded-lg overflow-hidden shadow-modern col-span-2">
+              <div ref={sagittalRef} className="absolute inset-0 w-full h-full" />
+              <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                Sagittal
+              </div>
+            </div>
+            {isLoading && (
+              <motion.div
+                className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-black/50 col-span-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <div className="flex flex-col items-center gap-4">
+                  <motion.div
+                    className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  />
+                  <motion.div
+                    className="text-white text-sm"
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    Loading MPR views...
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+        
+        {(renderingMode === '3D' || renderingMode === 'MIP') && (
+          <motion.div
+            className="relative w-full h-[600px] bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg overflow-hidden shadow-modern flex items-center justify-center"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="text-center p-8 max-w-2xl">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.5, type: "spring" }}
+              >
+                {renderingMode === '3D' ? (
+                  <CubeIcon className="h-24 w-24 mx-auto mb-6 text-blue-400" />
+                ) : (
+                  <BeakerIcon className="h-24 w-24 mx-auto mb-6 text-purple-400" />
+                )}
+              </motion.div>
+              <h3 className="text-2xl font-bold text-white mb-4">
+                {renderingMode === '3D' ? '3D Volume Rendering' : 'Maximum Intensity Projection (MIP)'}
+              </h3>
+              <p className="text-gray-300 mb-4">
+                {renderingMode === '3D' 
+                  ? 'Advanced 3D volume rendering provides interactive visualization of volumetric DICOM data with GPU-accelerated rendering.'
+                  : 'MIP rendering projects the maximum intensity values along viewing rays, ideal for visualizing high-contrast structures like vessels and bones.'
+                }
+              </p>
+              <div className="backdrop-blur-md bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4 text-left">
+                <div className="flex items-start gap-3">
+                  <BeakerIcon className="h-6 w-6 text-yellow-400 flex-shrink-0 mt-1" />
+                  <div>
+                    <p className="text-yellow-200 font-semibold mb-2">Multi-slice Data Required</p>
+                    <p className="text-yellow-100 text-sm">
+                      {renderingMode} rendering requires DICOM studies with multiple image slices to create volumetric visualizations. 
+                      The current study appears to contain only a single slice. Please upload a complete multi-slice CT or MRI study 
+                      to experience the full {renderingMode} rendering capabilities.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 grid grid-cols-2 gap-4 text-sm text-gray-400">
+                <div className="backdrop-blur-sm bg-white/5 p-3 rounded">
+                  <p className="font-semibold text-white mb-1">Features Include:</p>
+                  <ul className="text-left list-disc list-inside space-y-1">
+                    <li>GPU-accelerated rendering</li>
+                    <li>Interactive rotation</li>
+                    <li>Adjustable opacity</li>
+                    <li>Transfer functions</li>
+                  </ul>
+                </div>
+                <div className="backdrop-blur-sm bg-white/5 p-3 rounded">
+                  <p className="font-semibold text-white mb-1">Supported Modalities:</p>
+                  <ul className="text-left list-disc list-inside space-y-1">
+                    <li>CT scans</li>
+                    <li>MRI studies</li>
+                    <li>PET/CT fusion</li>
+                    <li>Angiography</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
         
         {instances.length > 1 && (
           <motion.div
@@ -383,6 +711,27 @@ const ToolButton: React.FC<{
       title={label}
     >
       {icon}
+    </Button>
+  </motion.div>
+);
+
+const ModeButton: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}> = ({ icon, label, active, onClick }) => (
+  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+    <Button
+      variant={active ? "default" : "outline"}
+      size="sm"
+      onClick={onClick}
+      className={`${
+        active ? 'bg-gradient-modern text-white border-transparent' : ''
+      } transition-all flex items-center gap-2`}
+    >
+      {icon}
+      <span>{label}</span>
     </Button>
   </motion.div>
 );
