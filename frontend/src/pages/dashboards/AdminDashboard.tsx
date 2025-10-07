@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { usersAPI, centresAPI, studiesAPI, authAPI, billingAPI } from '@/lib/api';
 import { Layout } from '@/components/Layout';
 import { motion } from 'framer-motion';
@@ -14,7 +15,8 @@ import {
   BuildingOfficeIcon, 
   DocumentIcon, 
   CurrencyDollarIcon, 
-  PlusIcon 
+  PlusIcon,
+  TrashIcon 
 } from '@heroicons/react/24/outline';
 import { fadeInUp, staggerContainer } from '@/lib/utils';
 
@@ -199,6 +201,60 @@ export const AdminDashboard: React.FC = () => {
         ? error.response.data.detail.map((d: any) => d.msg || d).join(', ')
         : error.response?.data?.detail || 'Please try again.';
       alert(`Failed to create pricing: ${detailMsg}`);
+    }
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    if (!window.confirm('Are you sure you want to delete this user?')) {
+      return;
+    }
+    
+    try {
+      await usersAPI.delete(userId);
+      fetchUsers();
+      fetchStats();
+      alert('User deleted successfully!');
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      alert('Failed to delete user. Please try again.');
+    }
+  };
+
+  const handleToggleUserStatus = async (userId: number, currentStatus: boolean) => {
+    try {
+      await usersAPI.update(userId, { is_active: !currentStatus });
+      fetchUsers();
+      alert('User status updated successfully!');
+    } catch (error) {
+      console.error('Failed to update user status:', error);
+      alert('Failed to update user status. Please try again.');
+    }
+  };
+
+  const handleDeleteCentre = async (centreId: number) => {
+    if (!window.confirm('Are you sure you want to delete this centre?')) {
+      return;
+    }
+    
+    try {
+      await centresAPI.delete(centreId);
+      fetchCentres();
+      fetchStats();
+      alert('Centre deleted successfully!');
+    } catch (error) {
+      console.error('Failed to delete centre:', error);
+      alert('Failed to delete centre. Please try again.');
+    }
+  };
+
+  const handleToggleCentreStatus = async (centreId: number, currentStatus: boolean) => {
+    try {
+      await centresAPI.update(centreId, { is_active: !currentStatus });
+      fetchCentres();
+      alert('Centre status updated successfully!');
+    } catch (error) {
+      console.error('Failed to update centre status:', error);
+      alert('Failed to update centre status. Please try again.');
     }
   };
 
@@ -389,13 +445,40 @@ export const AdminDashboard: React.FC = () => {
                     <p className="text-muted-foreground text-center py-4">No users found</p>
                   ) : (
                     users.map((user: any) => (
-                      <div key={user.id} className="flex items-center justify-between border-b pb-2">
-                        <div>
+                      <motion.div 
+                        key={user.id} 
+                        className="flex items-center justify-between border-b pb-2 backdrop-blur-sm bg-white/50 rounded-lg p-3 hover:bg-white/70 transition-all"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className="flex-1">
                           <p className="font-medium">{user.full_name || user.username}</p>
                           <p className="text-sm text-muted-foreground">{user.email}</p>
+                          <span className="text-xs capitalize text-indigo-600">{user.role.replace('_', ' ')}</span>
                         </div>
-                        <span className="text-sm capitalize">{user.role.replace('_', ' ')}</span>
-                      </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                              {user.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                            <Switch
+                              checked={user.is_active}
+                              onCheckedChange={() => handleToggleUserStatus(user.id, user.is_active)}
+                            />
+                          </div>
+                          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </Button>
+                          </motion.div>
+                        </div>
+                      </motion.div>
                     ))
                   )}
                 </div>
@@ -477,15 +560,39 @@ export const AdminDashboard: React.FC = () => {
                     <p className="text-muted-foreground text-center py-4">No centres found</p>
                   ) : (
                     centres.map((centre: any) => (
-                      <div key={centre.id} className="flex items-center justify-between border-b pb-2">
-                        <div>
+                      <motion.div 
+                        key={centre.id} 
+                        className="flex items-center justify-between border-b pb-2 backdrop-blur-sm bg-white/50 rounded-lg p-3 hover:bg-white/70 transition-all"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className="flex-1">
                           <p className="font-medium">{centre.name}</p>
                           <p className="text-sm text-muted-foreground">{centre.contact_email}</p>
                         </div>
-                        <span className={`text-sm ${centre.is_active ? 'text-green-600' : 'text-red-600'}`}>
-                          {centre.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                              {centre.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                            <Switch
+                              checked={centre.is_active}
+                              onCheckedChange={() => handleToggleCentreStatus(centre.id, centre.is_active)}
+                            />
+                          </div>
+                          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteCentre(centre.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </Button>
+                          </motion.div>
+                        </div>
+                      </motion.div>
                     ))
                   )}
                 </div>

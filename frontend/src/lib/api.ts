@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://app-vatkjvnd.fly.dev';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -52,6 +52,7 @@ export const centresAPI = {
   get: (id: number) => api.get(`/centres/${id}`),
   create: (data: any) => api.post('/centres', data),
   update: (id: number, data: any) => api.patch(`/centres/${id}`, data),
+  delete: (id: number) => api.delete(`/centres/${id}`),
 };
 
 export const studiesAPI = {
