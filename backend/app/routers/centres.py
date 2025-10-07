@@ -4,7 +4,7 @@ from typing import List
 from app.database import get_db
 from app.auth import require_role
 from app.models import DiagnosticCentre, UserRole, User
-from app.schemas import DiagnosticCentre as DiagnosticCentreSchema, DiagnosticCentreCreate
+from app.schemas import DiagnosticCentre as DiagnosticCentreSchema, DiagnosticCentreCreate, DiagnosticCentreUpdate
 
 router = APIRouter(prefix="/centres", tags=["centres"])
 
@@ -48,7 +48,7 @@ async def get_centre(
 @router.patch("/{centre_id}", response_model=DiagnosticCentreSchema)
 async def update_centre(
     centre_id: int,
-    centre_update: DiagnosticCentreCreate,
+    centre_update: DiagnosticCentreUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role([UserRole.ADMIN]))
 ):

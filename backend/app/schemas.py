@@ -43,6 +43,13 @@ class DiagnosticCentreBase(BaseModel):
 class DiagnosticCentreCreate(DiagnosticCentreBase):
     pass
 
+class DiagnosticCentreUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    is_active: Optional[bool] = None
+
 class DiagnosticCentre(DiagnosticCentreBase):
     id: int
     is_active: bool
