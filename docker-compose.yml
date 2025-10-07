@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: pacs_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pacs_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pacs_password}
+      POSTGRES_DB: ${POSTGRES_DB:-pacs_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - pacs_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pacs_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pacs_backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pacs_user}:${POSTGRES_PASSWORD:-pacs_password}@postgres:5432/${POSTGRES_DB:-pacs_db}
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
+      STORAGE_PATH: /app/storage
+    volumes:
+      - ./storage:/app/storage
+      - ./backend/app:/app/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - pacs_network
+    command: poetry run fastapi dev app/main.py --host 0.0.0.0
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pacs_frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - pacs_network
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+
+volumes:
+  postgres_data:
+
+networks:
+  pacs_network:
+    driver: bridge
