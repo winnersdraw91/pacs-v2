@@ -7,6 +7,7 @@ from app.routers import auth, users, centres, studies, reports, billing, ai, ima
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield
 
