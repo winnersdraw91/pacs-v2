@@ -34,10 +34,15 @@ type RenderingMode = '2D' | 'MPR' | '3D' | 'MIP';
 const {
   LengthTool,
   RectangleROITool,
+  EllipticalROITool,
+  CircleROITool,
   AngleTool,
+  BidirectionalTool,
+  ProbeTool,
   WindowLevelTool,
   PanTool,
   ZoomTool,
+  StackScrollTool,
   ToolGroupManager,
   Enums: toolEnums,
 } = cornerstoneTools;
@@ -45,10 +50,15 @@ const {
 const TOOL_NAMES = {
   LENGTH: 'Length',
   ROI: 'RectangleROI',
+  ELLIPSE: 'EllipticalROI',
+  CIRCLE: 'CircleROI',
   ANGLE: 'Angle',
+  BIDIRECTIONAL: 'Bidirectional',
+  PROBE: 'Probe',
   WINDOW_LEVEL: 'WindowLevel',
   PAN: 'Pan',
   ZOOM: 'Zoom',
+  STACK_SCROLL: 'StackScroll',
 };
 
 export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) => {
@@ -62,9 +72,14 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
   const [activePreset, setActivePreset] = useState<string>('brain');
   const [renderingMode, setRenderingMode] = useState<RenderingMode>('2D');
   const [aiEnabled, setAiEnabled] = useState(false);
+  const [showMeasurementMenu, setShowMeasurementMenu] = useState(false);
+  const [showROIMenu, setShowROIMenu] = useState(false);
+  const [isCinePlaying, setIsCinePlaying] = useState(false);
+  const [cineSpeed, setCineSpeed] = useState(10);
   const [renderingEngine, setRenderingEngine] = useState<any>(null);
   const [viewport, setViewport] = useState<any>(null);
   const toolGroupId = useRef(`TOOL_GROUP_${studyId}`);
+  const cineIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
     const init = async () => {
@@ -73,10 +88,15 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
         
         cornerstoneTools.addTool(LengthTool);
         cornerstoneTools.addTool(RectangleROITool);
+        cornerstoneTools.addTool(EllipticalROITool);
+        cornerstoneTools.addTool(CircleROITool);
         cornerstoneTools.addTool(AngleTool);
+        cornerstoneTools.addTool(BidirectionalTool);
+        cornerstoneTools.addTool(ProbeTool);
         cornerstoneTools.addTool(WindowLevelTool);
         cornerstoneTools.addTool(PanTool);
         cornerstoneTools.addTool(ZoomTool);
+        cornerstoneTools.addTool(StackScrollTool);
         
         const engine = new cornerstone.RenderingEngine(`engine_${studyId}`);
         setRenderingEngine(engine);
@@ -89,6 +109,9 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
     init();
     
     return () => {
+      if (cineIntervalRef.current) {
+        clearInterval(cineIntervalRef.current);
+      }
       if (renderingEngine) {
         renderingEngine.destroy();
       }
@@ -150,10 +173,15 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
     if (toolGroup) {
       toolGroup.addTool(TOOL_NAMES.LENGTH);
       toolGroup.addTool(TOOL_NAMES.ROI);
+      toolGroup.addTool(TOOL_NAMES.ELLIPSE);
+      toolGroup.addTool(TOOL_NAMES.CIRCLE);
       toolGroup.addTool(TOOL_NAMES.ANGLE);
+      toolGroup.addTool(TOOL_NAMES.BIDIRECTIONAL);
+      toolGroup.addTool(TOOL_NAMES.PROBE);
       toolGroup.addTool(TOOL_NAMES.WINDOW_LEVEL);
       toolGroup.addTool(TOOL_NAMES.PAN);
       toolGroup.addTool(TOOL_NAMES.ZOOM);
+      toolGroup.addTool(TOOL_NAMES.STACK_SCROLL);
       
       toolGroup.setToolActive(TOOL_NAMES.WINDOW_LEVEL, {
         bindings: [{ mouseButton: toolEnums.MouseBindings.Primary }],
@@ -354,6 +382,49 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
       loadInstance(currentInstance - 1);
     }
   };
+
+  const handleCinePlay = () => {
+    if (isCinePlaying) {
+      if (cineIntervalRef.current) {
+        clearInterval(cineIntervalRef.current);
+        cineIntervalRef.current = null;
+      }
+      setIsCinePlaying(false);
+    } else {
+      setIsCinePlaying(true);
+      const intervalMs = 1000 / cineSpeed;
+      cineIntervalRef.current = setInterval(() => {
+        setCurrentInstance(prev => {
+          const next = prev + 1;
+          if (next >= instances.length) {
+            return 0;
+          }
+          loadInstance(next);
+          return next;
+        });
+      }, intervalMs);
+    }
+  };
+
+  const handleCineSpeedChange = (speed: number) => {
+    setCineSpeed(speed);
+    if (isCinePlaying) {
+      if (cineIntervalRef.current) {
+        clearInterval(cineIntervalRef.current);
+      }
+      const intervalMs = 1000 / speed;
+      cineIntervalRef.current = setInterval(() => {
+        setCurrentInstance(prev => {
+          const next = prev + 1;
+          if (next >= instances.length) {
+            return 0;
+          }
+          loadInstance(next);
+          return next;
+        });
+      }, intervalMs);
+    }
+  };
   
   return (
     <Card className="backdrop-blur-sm bg-white/90 border-white/20 p-4">
@@ -440,18 +511,87 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
                 active={activeTool === TOOL_NAMES.WINDOW_LEVEL}
                 onClick={() => handleToolChange(TOOL_NAMES.WINDOW_LEVEL)}
               />
-              <ToolButton
-                icon={<ScaleIcon className="h-5 w-5" />}
-                label="Measure"
-                active={activeTool === TOOL_NAMES.LENGTH}
-                onClick={() => handleToolChange(TOOL_NAMES.LENGTH)}
-              />
-              <ToolButton
-                icon={<Square2StackIcon className="h-5 w-5" />}
-                label="ROI"
-                active={activeTool === TOOL_NAMES.ROI}
-                onClick={() => handleToolChange(TOOL_NAMES.ROI)}
-              />
+              
+              <div className="relative">
+                <ToolButton
+                  icon={<ScaleIcon className="h-5 w-5" />}
+                  label="Measurements"
+                  active={[TOOL_NAMES.LENGTH, TOOL_NAMES.ANGLE, TOOL_NAMES.BIDIRECTIONAL, TOOL_NAMES.PROBE].includes(activeTool)}
+                  onClick={() => setShowMeasurementMenu(!showMeasurementMenu)}
+                />
+                {showMeasurementMenu && (
+                  <motion.div
+                    className="absolute left-0 top-full mt-2 w-48 backdrop-blur-md bg-white/95 border border-white/20 rounded-lg shadow-lg z-50"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <div className="p-2 space-y-1">
+                      <button
+                        className={`w-full text-left px-3 py-2 rounded hover:bg-gray-100 ${activeTool === TOOL_NAMES.LENGTH ? 'bg-gradient-modern text-white' : ''}`}
+                        onClick={() => { handleToolChange(TOOL_NAMES.LENGTH); setShowMeasurementMenu(false); }}
+                      >
+                        Length
+                      </button>
+                      <button
+                        className={`w-full text-left px-3 py-2 rounded hover:bg-gray-100 ${activeTool === TOOL_NAMES.ANGLE ? 'bg-gradient-modern text-white' : ''}`}
+                        onClick={() => { handleToolChange(TOOL_NAMES.ANGLE); setShowMeasurementMenu(false); }}
+                      >
+                        Angle
+                      </button>
+                      <button
+                        className={`w-full text-left px-3 py-2 rounded hover:bg-gray-100 ${activeTool === TOOL_NAMES.BIDIRECTIONAL ? 'bg-gradient-modern text-white' : ''}`}
+                        onClick={() => { handleToolChange(TOOL_NAMES.BIDIRECTIONAL); setShowMeasurementMenu(false); }}
+                      >
+                        Bidirectional
+                      </button>
+                      <button
+                        className={`w-full text-left px-3 py-2 rounded hover:bg-gray-100 ${activeTool === TOOL_NAMES.PROBE ? 'bg-gradient-modern text-white' : ''}`}
+                        onClick={() => { handleToolChange(TOOL_NAMES.PROBE); setShowMeasurementMenu(false); }}
+                      >
+                        Probe
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              <div className="relative">
+                <ToolButton
+                  icon={<Square2StackIcon className="h-5 w-5" />}
+                  label="ROI Tools"
+                  active={[TOOL_NAMES.ROI, TOOL_NAMES.ELLIPSE, TOOL_NAMES.CIRCLE].includes(activeTool)}
+                  onClick={() => setShowROIMenu(!showROIMenu)}
+                />
+                {showROIMenu && (
+                  <motion.div
+                    className="absolute left-0 top-full mt-2 w-48 backdrop-blur-md bg-white/95 border border-white/20 rounded-lg shadow-lg z-50"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <div className="p-2 space-y-1">
+                      <button
+                        className={`w-full text-left px-3 py-2 rounded hover:bg-gray-100 ${activeTool === TOOL_NAMES.ROI ? 'bg-gradient-modern text-white' : ''}`}
+                        onClick={() => { handleToolChange(TOOL_NAMES.ROI); setShowROIMenu(false); }}
+                      >
+                        Rectangle ROI
+                      </button>
+                      <button
+                        className={`w-full text-left px-3 py-2 rounded hover:bg-gray-100 ${activeTool === TOOL_NAMES.ELLIPSE ? 'bg-gradient-modern text-white' : ''}`}
+                        onClick={() => { handleToolChange(TOOL_NAMES.ELLIPSE); setShowROIMenu(false); }}
+                      >
+                        Ellipse ROI
+                      </button>
+                      <button
+                        className={`w-full text-left px-3 py-2 rounded hover:bg-gray-100 ${activeTool === TOOL_NAMES.CIRCLE ? 'bg-gradient-modern text-white' : ''}`}
+                        onClick={() => { handleToolChange(TOOL_NAMES.CIRCLE); setShowROIMenu(false); }}
+                      >
+                        Circle ROI
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+              
               <ToolButton
                 icon={<MagnifyingGlassPlusIcon className="h-5 w-5" />}
                 label="Zoom"
@@ -501,6 +641,36 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, delay: 0.1 }}
           >
+            <div className="absolute top-2 left-2 text-white text-xs space-y-1 z-10 pointer-events-none">
+              <div className="backdrop-blur-sm bg-black/50 px-2 py-1 rounded">
+                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+              <div className="backdrop-blur-sm bg-black/50 px-2 py-1 rounded">
+                Study: {studyId}
+              </div>
+            </div>
+
+            <div className="absolute top-2 right-2 text-white text-xs text-right space-y-1 z-10 pointer-events-none">
+              <div className="backdrop-blur-sm bg-black/50 px-2 py-1 rounded">
+                I:{currentInstance + 1} ({currentInstance + 1}/{instances.length})
+              </div>
+              <div className="backdrop-blur-sm bg-black/50 px-2 py-1 rounded">
+                W:{activePreset === 'brain' ? '80' : activePreset === 'bone' ? '2500' : activePreset === 'lung' ? '1500' : activePreset === 'abdomen' ? '350' : '150'} L:{activePreset === 'brain' ? '40' : activePreset === 'bone' ? '480' : activePreset === 'lung' ? '-600' : activePreset === 'abdomen' ? '40' : '30'}
+              </div>
+            </div>
+
+            <div className="absolute bottom-2 left-2 text-white text-sm font-bold z-10 pointer-events-none">
+              <div className="backdrop-blur-sm bg-black/50 w-8 h-8 rounded flex items-center justify-center">
+                A
+              </div>
+            </div>
+
+            <div className="absolute bottom-2 right-2 text-white text-sm font-bold z-10 pointer-events-none">
+              <div className="backdrop-blur-sm bg-black/50 w-8 h-8 rounded flex items-center justify-center">
+                R
+              </div>
+            </div>
+            
             <div
               ref={viewportRef}
               className="absolute inset-0 w-full h-full"
@@ -648,46 +818,93 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
         )}
         
         {instances.length > 1 && (
-          <motion.div
-            className="flex items-center justify-between backdrop-blur-sm bg-white/50 rounded-lg p-3"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-          >
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrevInstance}
-                disabled={currentInstance === 0}
-                className="hover:bg-gradient-modern hover:text-white transition-all"
-              >
-                <ChevronLeftIcon className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-            </motion.div>
-            <motion.span
-              className="text-sm font-medium"
-              key={currentInstance}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.2 }}
+          <>
+            <motion.div
+              className="flex items-center justify-center gap-4 backdrop-blur-sm bg-white/50 rounded-lg p-3"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
             >
-              Instance {currentInstance + 1} of {instances.length}
-            </motion.span>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleNextInstance}
-                disabled={currentInstance === instances.length - 1}
-                className="hover:bg-gradient-modern hover:text-white transition-all"
+                onClick={handleCinePlay}
+                className={isCinePlaying ? "bg-gradient-modern text-white" : ""}
               >
-                Next
-                <ChevronRightIcon className="h-4 w-4 ml-1" />
+                {isCinePlaying ? (
+                  <>
+                    <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    Pause
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                    </svg>
+                    Play
+                  </>
+                )}
               </Button>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-700">Speed:</span>
+                <select
+                  value={cineSpeed}
+                  onChange={(e) => handleCineSpeedChange(Number(e.target.value))}
+                  className="text-sm border border-gray-300 rounded px-2 py-1"
+                >
+                  <option value="5">5 fps</option>
+                  <option value="10">10 fps</option>
+                  <option value="15">15 fps</option>
+                  <option value="20">20 fps</option>
+                  <option value="30">30 fps</option>
+                </select>
+              </div>
             </motion.div>
-          </motion.div>
+
+            <motion.div
+              className="backdrop-blur-sm bg-white/50 rounded-lg p-4"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.25 }}
+            >
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePrevInstance}
+                  disabled={currentInstance === 0}
+                >
+                  <ChevronLeftIcon className="h-4 w-4" />
+                </Button>
+                
+                <div className="flex-1">
+                  <input
+                    type="range"
+                    min="0"
+                    max={instances.length - 1}
+                    value={currentInstance}
+                    onChange={(e) => loadInstance(Number(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                </div>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleNextInstance}
+                  disabled={currentInstance === instances.length - 1}
+                >
+                  <ChevronRightIcon className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="text-center text-sm text-gray-700 mt-2">
+                Instance {currentInstance + 1} of {instances.length}
+              </div>
+            </motion.div>
+          </>
         )}
       </div>
     </Card>
