@@ -427,7 +427,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
   };
   
   return (
-    <Card className="bg-slate-900 border-slate-700 p-4">
+    <Card className="bg-gray-900 border-gray-700 p-4">
       <div className="space-y-4">
         <motion.div
           className="flex items-center justify-between"
@@ -443,7 +443,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
               size="sm"
               variant={aiEnabled ? "default" : "outline"}
               onClick={() => setAiEnabled(!aiEnabled)}
-              className={aiEnabled ? "bg-cyan-500 hover:bg-cyan-600 text-white" : "border-slate-600 text-slate-300 hover:bg-slate-800"}
+              className={aiEnabled ? "bg-cyan-500 hover:bg-cyan-600 text-white" : "border-gray-600 text-gray-300 hover:bg-gray-800"}
             >
               <SparklesIcon className="h-4 w-4 mr-1" />
               AI Anatomy
@@ -466,7 +466,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
         )}
         
         <motion.div
-          className="flex gap-2 bg-slate-800 border border-slate-700 rounded-lg p-2"
+          className="flex gap-2 bg-gray-800 border border-gray-700 rounded-lg p-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3, delay: 0.1 }}
@@ -499,7 +499,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
         
         {renderingMode === '2D' && (
           <motion.div
-            className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg p-2"
+            className="flex items-center gap-2 bg-gray-800 border border-gray-700 rounded-lg p-2"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
@@ -521,31 +521,31 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
                 />
                 {showMeasurementMenu && (
                   <motion.div
-                    className="absolute left-0 top-full mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50"
+                    className="absolute left-0 top-full mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                   >
                     <div className="p-2 space-y-1">
                       <button
-                        className={`w-full text-left px-3 py-2 rounded text-slate-200 ${activeTool === TOOL_NAMES.LENGTH ? 'bg-cyan-500 text-white' : 'hover:bg-slate-700'}`}
+                        className={`w-full text-left px-3 py-2 rounded text-gray-200 ${activeTool === TOOL_NAMES.LENGTH ? 'bg-cyan-500 text-white' : 'hover:bg-gray-700'}`}
                         onClick={() => { handleToolChange(TOOL_NAMES.LENGTH); setShowMeasurementMenu(false); }}
                       >
                         Length
                       </button>
                       <button
-                        className={`w-full text-left px-3 py-2 rounded text-slate-200 ${activeTool === TOOL_NAMES.ANGLE ? 'bg-cyan-500 text-white' : 'hover:bg-slate-700'}`}
+                        className={`w-full text-left px-3 py-2 rounded text-gray-200 ${activeTool === TOOL_NAMES.ANGLE ? 'bg-cyan-500 text-white' : 'hover:bg-gray-700'}`}
                         onClick={() => { handleToolChange(TOOL_NAMES.ANGLE); setShowMeasurementMenu(false); }}
                       >
                         Angle
                       </button>
                       <button
-                        className={`w-full text-left px-3 py-2 rounded text-slate-200 ${activeTool === TOOL_NAMES.BIDIRECTIONAL ? 'bg-cyan-500 text-white' : 'hover:bg-slate-700'}`}
+                        className={`w-full text-left px-3 py-2 rounded text-gray-200 ${activeTool === TOOL_NAMES.BIDIRECTIONAL ? 'bg-cyan-500 text-white' : 'hover:bg-gray-700'}`}
                         onClick={() => { handleToolChange(TOOL_NAMES.BIDIRECTIONAL); setShowMeasurementMenu(false); }}
                       >
                         Bidirectional
                       </button>
                       <button
-                        className={`w-full text-left px-3 py-2 rounded text-slate-200 ${activeTool === TOOL_NAMES.PROBE ? 'bg-cyan-500 text-white' : 'hover:bg-slate-700'}`}
+                        className={`w-full text-left px-3 py-2 rounded text-gray-200 ${activeTool === TOOL_NAMES.PROBE ? 'bg-cyan-500 text-white' : 'hover:bg-gray-700'}`}
                         onClick={() => { handleToolChange(TOOL_NAMES.PROBE); setShowMeasurementMenu(false); }}
                       >
                         Probe
@@ -564,25 +564,25 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
                 />
                 {showROIMenu && (
                   <motion.div
-                    className="absolute left-0 top-full mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50"
+                    className="absolute left-0 top-full mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                   >
                     <div className="p-2 space-y-1">
                       <button
-                        className={`w-full text-left px-3 py-2 rounded text-slate-200 ${activeTool === TOOL_NAMES.ROI ? 'bg-cyan-500 text-white' : 'hover:bg-slate-700'}`}
+                        className={`w-full text-left px-3 py-2 rounded text-gray-200 ${activeTool === TOOL_NAMES.ROI ? 'bg-cyan-500 text-white' : 'hover:bg-gray-700'}`}
                         onClick={() => { handleToolChange(TOOL_NAMES.ROI); setShowROIMenu(false); }}
                       >
                         Rectangle ROI
                       </button>
                       <button
-                        className={`w-full text-left px-3 py-2 rounded text-slate-200 ${activeTool === TOOL_NAMES.ELLIPSE ? 'bg-cyan-500 text-white' : 'hover:bg-slate-700'}`}
+                        className={`w-full text-left px-3 py-2 rounded text-gray-200 ${activeTool === TOOL_NAMES.ELLIPSE ? 'bg-cyan-500 text-white' : 'hover:bg-gray-700'}`}
                         onClick={() => { handleToolChange(TOOL_NAMES.ELLIPSE); setShowROIMenu(false); }}
                       >
                         Ellipse ROI
                       </button>
                       <button
-                        className={`w-full text-left px-3 py-2 rounded text-slate-200 ${activeTool === TOOL_NAMES.CIRCLE ? 'bg-cyan-500 text-white' : 'hover:bg-slate-700'}`}
+                        className={`w-full text-left px-3 py-2 rounded text-gray-200 ${activeTool === TOOL_NAMES.CIRCLE ? 'bg-cyan-500 text-white' : 'hover:bg-gray-700'}`}
                         onClick={() => { handleToolChange(TOOL_NAMES.CIRCLE); setShowROIMenu(false); }}
                       >
                         Circle ROI
@@ -600,14 +600,14 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
               />
             </div>
             
-            <div className="h-6 w-px bg-slate-700" />
+            <div className="h-6 w-px bg-gray-700" />
             
             <div className="flex gap-1">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleReset}
-                className="text-slate-300 hover:bg-slate-700 hover:text-white"
+                className="text-gray-300 hover:bg-gray-700 hover:text-white"
               >
                 <ArrowsPointingOutIcon className="h-5 w-5" />
               </Button>
@@ -627,7 +627,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
               size="sm"
               variant={activePreset === preset ? "default" : "outline"}
               onClick={() => handlePresetChange(preset)}
-              className={activePreset === preset ? "bg-cyan-500 hover:bg-cyan-600 text-white border-transparent" : "border-slate-600 text-slate-300 hover:bg-slate-800"}
+              className={activePreset === preset ? "bg-cyan-500 hover:bg-cyan-600 text-white border-transparent" : "border-gray-600 text-gray-300 hover:bg-gray-800"}
             >
               {preset.charAt(0).toUpperCase() + preset.slice(1)}
             </Button>
@@ -754,22 +754,22 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
         
         {(renderingMode === '3D' || renderingMode === 'MIP') && (
           <motion.div
-            className="relative w-full h-[600px] bg-slate-900 rounded-lg overflow-hidden shadow-xl flex items-center justify-center"
+            className="relative w-full h-[600px] bg-gray-900 rounded-lg overflow-hidden shadow-xl flex items-center justify-center"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
           >
             <div className="text-center">
               {renderingMode === '3D' ? (
-                <CubeIcon className="h-16 w-16 text-slate-600 mx-auto mb-4" />
+                <CubeIcon className="h-16 w-16 text-gray-600 mx-auto mb-4" />
               ) : (
-                <BeakerIcon className="h-16 w-16 text-slate-600 mx-auto mb-4" />
+                <BeakerIcon className="h-16 w-16 text-gray-600 mx-auto mb-4" />
               )}
-              <h4 className="text-slate-300 text-lg font-semibold mb-2">
+              <h4 className="text-gray-300 text-lg font-semibold mb-2">
                 {renderingMode === '3D' ? '3D Volume Rendering' : 'Maximum Intensity Projection (MIP)'}
               </h4>
-              <p className="text-slate-500 text-sm">Available with multi-slice CT/MRI data</p>
-              <p className="text-slate-600 text-xs mt-2">
+              <p className="text-gray-500 text-sm">Available with multi-slice CT/MRI data</p>
+              <p className="text-gray-600 text-xs mt-2">
                 {renderingMode === '3D' 
                   ? 'Professional Volume Rendering • GPU Accelerated • Real-time Interaction'
                   : 'Clinical Grade MIP • Slab Thickness Control • Automatic Vessel Enhancement'
@@ -782,7 +782,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
         {instances.length > 1 && (
           <>
             <motion.div
-              className="flex items-center justify-center gap-4 bg-slate-800 border border-slate-700 rounded-lg p-3"
+              className="flex items-center justify-center gap-4 bg-gray-800 border border-gray-700 rounded-lg p-3"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.2 }}
@@ -791,7 +791,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
                 variant="outline"
                 size="sm"
                 onClick={handleCinePlay}
-                className={isCinePlaying ? "bg-cyan-500 hover:bg-cyan-600 text-white border-transparent" : "border-slate-600 text-slate-300 hover:bg-slate-700"}
+                className={isCinePlaying ? "bg-cyan-500 hover:bg-cyan-600 text-white border-transparent" : "border-gray-600 text-gray-300 hover:bg-gray-700"}
               >
                 {isCinePlaying ? (
                   <>
@@ -811,11 +811,11 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
               </Button>
               
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-300">Speed:</span>
+                <span className="text-sm text-gray-300">Speed:</span>
                 <select
                   value={cineSpeed}
                   onChange={(e) => handleCineSpeedChange(Number(e.target.value))}
-                  className="text-sm bg-slate-700 border border-slate-600 text-slate-200 rounded px-2 py-1"
+                  className="text-sm bg-gray-700 border border-gray-600 text-gray-200 rounded px-2 py-1"
                 >
                   <option value="5">5 fps</option>
                   <option value="10">10 fps</option>
@@ -827,7 +827,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
             </motion.div>
 
             <motion.div
-              className="bg-slate-800 border border-slate-700 rounded-lg p-4"
+              className="bg-gray-800 border border-gray-700 rounded-lg p-4"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.25 }}
@@ -838,7 +838,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
                   size="sm"
                   onClick={handlePrevInstance}
                   disabled={currentInstance === 0}
-                  className="text-slate-300 hover:bg-slate-700 disabled:text-slate-600"
+                  className="text-gray-300 hover:bg-gray-700 disabled:text-gray-600"
                 >
                   <ChevronLeftIcon className="h-4 w-4" />
                 </Button>
@@ -850,7 +850,7 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
                     max={instances.length - 1}
                     value={currentInstance}
                     onChange={(e) => loadInstance(Number(e.target.value))}
-                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
                   />
                 </div>
                 
@@ -859,12 +859,12 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ studyId, instances }) 
                   size="sm"
                   onClick={handleNextInstance}
                   disabled={currentInstance === instances.length - 1}
-                  className="text-slate-300 hover:bg-slate-700 disabled:text-slate-600"
+                  className="text-gray-300 hover:bg-gray-700 disabled:text-gray-600"
                 >
                   <ChevronRightIcon className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="text-center text-sm text-slate-300 mt-2">
+              <div className="text-center text-sm text-gray-300 mt-2">
                 Instance {currentInstance + 1} of {instances.length}
               </div>
             </motion.div>
@@ -887,7 +887,7 @@ const ToolButton: React.FC<{
       size="sm"
       onClick={onClick}
       className={`${
-        active ? 'bg-cyan-500 hover:bg-cyan-600 text-white' : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+        active ? 'bg-cyan-500 hover:bg-cyan-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'
       } transition-all p-2`}
       title={label}
     >
@@ -908,7 +908,7 @@ const ModeButton: React.FC<{
       size="sm"
       onClick={onClick}
       className={`${
-        active ? 'bg-cyan-500 hover:bg-cyan-600 text-white border-transparent' : 'border-slate-600 text-slate-300 hover:bg-slate-700'
+        active ? 'bg-cyan-500 hover:bg-cyan-600 text-white border-transparent' : 'border-gray-600 text-gray-300 hover:bg-gray-700'
       } transition-all flex items-center gap-2`}
     >
       {icon}
