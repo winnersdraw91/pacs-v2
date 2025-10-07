@@ -1,7 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { 
+  MagnifyingGlassPlusIcon, 
+  MagnifyingGlassMinusIcon, 
+  ArrowsPointingOutIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
+} from '@heroicons/react/24/outline';
 import * as dicomParser from 'dicom-parser';
 
 interface DicomViewerProps {
@@ -188,24 +195,66 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ instances }) => {
   };
 
   return (
-    <Card className="p-4">
+    <Card className="backdrop-blur-sm bg-white/90 border-white/20 p-4">
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">DICOM Viewer</h3>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleZoomIn}>
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleZoomOut}>
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleReset}>
-              <Maximize className="h-4 w-4" />
-            </Button>
+        <motion.div 
+          className="flex items-center justify-between"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <h3 className="text-lg font-semibold bg-gradient-modern bg-clip-text text-transparent">
+            DICOM Viewer
+          </h3>
+          <div className="flex gap-2 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg p-2">
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleZoomIn}
+                className="hover:bg-white/20"
+              >
+                <MagnifyingGlassPlusIcon className="h-5 w-5" />
+              </Button>
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleZoomOut}
+                className="hover:bg-white/20"
+              >
+                <MagnifyingGlassMinusIcon className="h-5 w-5" />
+              </Button>
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleReset}
+                className="hover:bg-white/20"
+              >
+                <ArrowsPointingOutIcon className="h-5 w-5" />
+              </Button>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="relative w-full h-[600px] bg-black rounded-lg overflow-hidden">
+        <motion.div 
+          className="relative w-full h-[600px] bg-black rounded-lg overflow-hidden shadow-modern"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
           <canvas
             ref={canvasRef}
             width={800}
@@ -213,34 +262,77 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ instances }) => {
             className="absolute inset-0 w-full h-full"
           />
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-white">Loading DICOM image...</div>
-            </div>
+            <motion.div 
+              className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-black/50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <div className="flex flex-col items-center gap-4">
+                <motion.div
+                  className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                />
+                <motion.div 
+                  className="text-white text-sm"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  Loading DICOM image...
+                </motion.div>
+              </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
 
         {instances.length > 1 && (
-          <div className="flex items-center justify-between">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handlePrevInstance}
-              disabled={currentInstance === 0}
+          <motion.div 
+            className="flex items-center justify-between backdrop-blur-sm bg-white/50 rounded-lg p-3"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+          >
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handlePrevInstance}
+                disabled={currentInstance === 0}
+                className="hover:bg-gradient-modern hover:text-white transition-all"
+              >
+                <ChevronLeftIcon className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+            </motion.div>
+            <motion.span 
+              className="text-sm font-medium"
+              key={currentInstance}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.2 }}
+            >
               Instance {currentInstance + 1} of {instances.length}
-            </span>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleNextInstance}
-              disabled={currentInstance === instances.length - 1}
+            </motion.span>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              Next
-            </Button>
-          </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleNextInstance}
+                disabled={currentInstance === instances.length - 1}
+                className="hover:bg-gradient-modern hover:text-white transition-all"
+              >
+                Next
+                <ChevronRightIcon className="h-4 w-4 ml-1" />
+              </Button>
+            </motion.div>
+          </motion.div>
         )}
       </div>
     </Card>

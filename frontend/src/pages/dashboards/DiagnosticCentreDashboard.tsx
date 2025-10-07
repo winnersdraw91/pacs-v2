@@ -9,8 +9,16 @@ import { Label } from '@/components/ui/label';
 import { studiesAPI, usersAPI, imagingMachinesAPI, authAPI } from '@/lib/api';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, FileImage, DollarSign, Upload } from 'lucide-react';
-import { PlusIcon } from '@heroicons/react/24/outline';
+import { motion } from 'framer-motion';
+import { 
+  UsersIcon, 
+  PhotoIcon, 
+  CurrencyDollarIcon, 
+  ArrowUpTrayIcon,
+  PlusIcon,
+  ComputerDesktopIcon
+} from '@heroicons/react/24/outline';
+import { fadeInUp, staggerContainer } from '@/lib/utils';
 
 export const DiagnosticCentreDashboard: React.FC = () => {
   const [stats, setStats] = useState({
@@ -128,107 +136,171 @@ export const DiagnosticCentreDashboard: React.FC = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <motion.div 
+          className="flex items-center justify-between"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Diagnostic Centre Dashboard</h2>
+            <h2 className="text-3xl font-bold tracking-tight bg-gradient-modern bg-clip-text text-transparent">
+              Diagnostic Centre Dashboard
+            </h2>
             <p className="text-muted-foreground">
               Manage your centre operations and team
             </p>
           </div>
-          <Button onClick={() => navigate('/upload')}>
-            <Upload className="mr-2 h-4 w-4" />
-            Upload Study
-          </Button>
-        </div>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Button 
+              onClick={() => navigate('/upload')}
+              className="bg-gradient-modern hover:opacity-90 transition-opacity"
+            >
+              <ArrowUpTrayIcon className="mr-2 h-4 w-4" />
+              Upload Study
+            </Button>
+          </motion.div>
+        </motion.div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Studies</CardTitle>
-              <FileImage className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalStudies}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Team Members</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalUsers}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Reports</CardTitle>
-              <FileImage className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingReports}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Billing</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${stats.totalBilling}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="studies" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="studies">Studies</TabsTrigger>
-            <TabsTrigger value="team">Team</TabsTrigger>
-            <TabsTrigger value="machines">Imaging Machines</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="studies" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Studies</CardTitle>
-                <CardDescription>View and manage your studies</CardDescription>
+        <motion.div 
+          className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+        >
+          <motion.div variants={fadeInUp}>
+            <Card className="backdrop-blur-sm bg-white/90 border-white/20 hover:shadow-modern transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Studies</CardTitle>
+                <PhotoIcon className="h-5 w-5 text-blue-500" />
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {studies.map((study: any) => (
-                    <div key={study.id} className="flex items-center justify-between border-b pb-2">
-                      <div>
-                        <p className="font-medium">{study.study_id}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {study.patient_name} - {study.modality}
-                        </p>
-                      </div>
-                      <span className="text-sm capitalize">{study.status.replace('_', ' ')}</span>
-                    </div>
-                  ))}
-                </div>
+                <div className="text-2xl font-bold">{stats.totalStudies}</div>
+                <p className="text-xs text-muted-foreground">Uploaded DICOM studies</p>
               </CardContent>
             </Card>
-          </TabsContent>
+          </motion.div>
+
+          <motion.div variants={fadeInUp}>
+            <Card className="backdrop-blur-sm bg-white/90 border-white/20 hover:shadow-modern transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Team Members</CardTitle>
+                <UsersIcon className="h-5 w-5 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalUsers}</div>
+                <p className="text-xs text-muted-foreground">Active technicians</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={fadeInUp}>
+            <Card className="backdrop-blur-sm bg-white/90 border-white/20 hover:shadow-modern transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Reports</CardTitle>
+                <PhotoIcon className="h-5 w-5 text-orange-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.pendingReports}</div>
+                <p className="text-xs text-muted-foreground">Awaiting diagnosis</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={fadeInUp}>
+            <Card className="backdrop-blur-sm bg-white/90 border-white/20 hover:shadow-modern transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Billing</CardTitle>
+                <CurrencyDollarIcon className="h-5 w-5 text-purple-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${stats.totalBilling}</div>
+                <p className="text-xs text-muted-foreground">Current cycle</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          <Tabs defaultValue="studies" className="space-y-4">
+            <TabsList className="backdrop-blur-sm bg-white/90 border border-white/20">
+              <TabsTrigger value="studies">Studies</TabsTrigger>
+              <TabsTrigger value="team">Team</TabsTrigger>
+              <TabsTrigger value="machines">Imaging Machines</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="studies" className="space-y-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card className="backdrop-blur-sm bg-white/90 border-white/20">
+                  <CardHeader>
+                    <CardTitle>Recent Studies</CardTitle>
+                    <CardDescription>View and manage your studies</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <motion.div 
+                      className="space-y-2"
+                      variants={staggerContainer}
+                      initial="initial"
+                      animate="animate"
+                    >
+                      {studies.map((study: any) => (
+                        <motion.div 
+                          key={study.id} 
+                          className="flex items-center justify-between border-b pb-2 hover:bg-gray-50/50 rounded-lg p-3 transition-colors"
+                          variants={fadeInUp}
+                        >
+                          <div>
+                            <p className="font-medium">{study.study_id}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {study.patient_name} - {study.modality}
+                            </p>
+                          </div>
+                          <span className="text-sm capitalize px-2 py-1 rounded-md bg-blue-50 text-blue-700">
+                            {study.status.replace('_', ' ')}
+                          </span>
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
 
           <TabsContent value="team" className="space-y-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle>Team Members</CardTitle>
-                  <CardDescription>Manage your centre's team</CardDescription>
-                </div>
-                <Dialog open={isAddTechnicianOpen} onOpenChange={setIsAddTechnicianOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm">
-                      <PlusIcon className="mr-2 h-4 w-4" />
-                      Add Technician
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="backdrop-blur-sm bg-white/90 border-white/20">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <div>
+                    <CardTitle>Team Members</CardTitle>
+                    <CardDescription>Manage your centre's team</CardDescription>
+                  </div>
+                  <Dialog open={isAddTechnicianOpen} onOpenChange={setIsAddTechnicianOpen}>
+                    <DialogTrigger asChild>
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Button size="sm" className="bg-gradient-modern hover:opacity-90 transition-opacity">
+                          <PlusIcon className="mr-2 h-4 w-4" />
+                          Add Technician
+                        </Button>
+                      </motion.div>
+                    </DialogTrigger>
+                    <DialogContent className="backdrop-blur-md bg-white/95">
                     <DialogHeader>
                       <DialogTitle>Create New Technician</DialogTitle>
                       <DialogDescription>Add a new technician to your centre</DialogDescription>
@@ -272,44 +344,71 @@ export const DiagnosticCentreDashboard: React.FC = () => {
                           required
                         />
                       </div>
-                      <Button onClick={handleCreateTechnician} className="w-full">
-                        Create Technician
-                      </Button>
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Button onClick={handleCreateTechnician} className="w-full bg-gradient-modern hover:opacity-90">
+                          Create Technician
+                        </Button>
+                      </motion.div>
                     </div>
                   </DialogContent>
                 </Dialog>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <motion.div 
+                  className="space-y-2"
+                  variants={staggerContainer}
+                  initial="initial"
+                  animate="animate"
+                >
                   {users.map((user: any) => (
-                    <div key={user.id} className="flex items-center justify-between border-b pb-2">
+                    <motion.div 
+                      key={user.id} 
+                      className="flex items-center justify-between border-b pb-2 hover:bg-gray-50/50 rounded-lg p-3 transition-colors"
+                      variants={fadeInUp}
+                    >
                       <div>
                         <p className="font-medium">{user.full_name || user.username}</p>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
                       </div>
-                      <span className="text-sm capitalize">{user.role.replace('_', ' ')}</span>
-                    </div>
+                      <span className="text-sm capitalize px-2 py-1 rounded-md bg-green-50 text-green-700">
+                        {user.role.replace('_', ' ')}
+                      </span>
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
               </CardContent>
             </Card>
+            </motion.div>
           </TabsContent>
 
           <TabsContent value="machines" className="space-y-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle>Imaging Machines</CardTitle>
-                  <CardDescription>Configure DICOM servers and PACS connections</CardDescription>
-                </div>
-                <Dialog open={isAddMachineOpen} onOpenChange={setIsAddMachineOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm">
-                      <PlusIcon className="mr-2 h-4 w-4" />
-                      Add Machine
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="backdrop-blur-sm bg-white/90 border-white/20">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <div>
+                    <CardTitle>Imaging Machines</CardTitle>
+                    <CardDescription>Configure DICOM servers and PACS connections</CardDescription>
+                  </div>
+                  <Dialog open={isAddMachineOpen} onOpenChange={setIsAddMachineOpen}>
+                    <DialogTrigger asChild>
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Button size="sm" className="bg-gradient-modern hover:opacity-90 transition-opacity">
+                          <PlusIcon className="mr-2 h-4 w-4" />
+                          Add Machine
+                        </Button>
+                      </motion.div>
+                    </DialogTrigger>
+                    <DialogContent className="backdrop-blur-md bg-white/95">
                     <DialogHeader>
                       <DialogTitle>Configure Imaging Machine</DialogTitle>
                       <DialogDescription>Add a new DICOM imaging device</DialogDescription>
@@ -365,40 +464,59 @@ export const DiagnosticCentreDashboard: React.FC = () => {
                           placeholder="Optional description"
                         />
                       </div>
-                      <Button onClick={handleCreateMachine} className="w-full">
-                        Add Machine
-                      </Button>
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Button onClick={handleCreateMachine} className="w-full bg-gradient-modern hover:opacity-90">
+                          Add Machine
+                        </Button>
+                      </motion.div>
                     </div>
                   </DialogContent>
                 </Dialog>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <motion.div 
+                  className="space-y-2"
+                  variants={staggerContainer}
+                  initial="initial"
+                  animate="animate"
+                >
                   {imagingMachines.length === 0 ? (
                     <p className="text-muted-foreground">No imaging machines configured</p>
                   ) : (
                     imagingMachines.map((machine: any) => (
-                      <div key={machine.id} className="flex items-center justify-between border-b pb-2">
-                        <div>
-                          <p className="font-medium">{machine.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {machine.ip_address}:{machine.port} ({machine.ae_title})
-                          </p>
-                          {machine.description && (
-                            <p className="text-xs text-muted-foreground">{machine.description}</p>
-                          )}
+                      <motion.div 
+                        key={machine.id} 
+                        className="flex items-center justify-between border-b pb-2 hover:bg-gray-50/50 rounded-lg p-3 transition-colors"
+                        variants={fadeInUp}
+                      >
+                        <div className="flex items-center gap-3">
+                          <ComputerDesktopIcon className="h-5 w-5 text-indigo-500" />
+                          <div>
+                            <p className="font-medium">{machine.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {machine.ip_address}:{machine.port} ({machine.ae_title})
+                            </p>
+                            {machine.description && (
+                              <p className="text-xs text-muted-foreground">{machine.description}</p>
+                            )}
+                          </div>
                         </div>
-                        <span className={`text-sm ${machine.is_active ? 'text-green-600' : 'text-gray-400'}`}>
+                        <span className={`text-sm px-2 py-1 rounded-md ${machine.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
                           {machine.is_active ? 'Active' : 'Inactive'}
                         </span>
-                      </div>
+                      </motion.div>
                     ))
                   )}
-                </div>
+                </motion.div>
               </CardContent>
             </Card>
+            </motion.div>
           </TabsContent>
         </Tabs>
+        </motion.div>
       </div>
     </Layout>
   );
